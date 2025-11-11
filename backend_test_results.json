@@ -1,0 +1,92 @@
+{
+  "timestamp": "2025-11-11T21:05:46.985764",
+  "total_tests": 14,
+  "passed_tests": 14,
+  "success_rate": 100.0,
+  "test_details": [
+    {
+      "test": "Admin Login",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:43.736314"
+    },
+    {
+      "test": "Change Password",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:44.221065"
+    },
+    {
+      "test": "Admin Login",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:44.487572"
+    },
+    {
+      "test": "Create Folder",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:44.534554"
+    },
+    {
+      "test": "Get Folders",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:44.570698"
+    },
+    {
+      "test": "Upload Video",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:44.622308"
+    },
+    {
+      "test": "Get Videos",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:46.659896"
+    },
+    {
+      "test": "Get Single Video",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:46.703418"
+    },
+    {
+      "test": "Update Video",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:46.741374"
+    },
+    {
+      "test": "Create Embed Settings",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:46.801274"
+    },
+    {
+      "test": "Get Embed Settings",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:46.835814"
+    },
+    {
+      "test": "Get Embed Code",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:46.873148"
+    },
+    {
+      "test": "Delete Video",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:46.948191"
+    },
+    {
+      "test": "Delete Folder",
+      "success": true,
+      "details": "",
+      "timestamp": "2025-11-11T21:05:46.985005"
+    }
+  ]
+}
