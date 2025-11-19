@@ -1,0 +1,132 @@
+/* VidStream Connector Admin Styles */
+
+.vidstream-admin {
+    max-width: 1200px;
+}
+
+.vidstream-admin h1 {
+    margin-bottom: 20px;
+}
+
+.vidstream-admin h2 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+.vidstream-sync-section,
+.vidstream-info-section {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    margin-bottom: 20px;
+}
+
+.vidstream-progress-bar {
+    width: 100%;
+    height: 30px;
+    background: #f0f0f1;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.vidstream-progress-fill {
+    height: 100%;
+    background: linear-gradient(to right, #2271b1, #135e96);
+    transition: width 0.3s ease;
+    width: 0;
+}
+
+.vidstream-progress-text {
+    margin-top: 10px;
+    font-weight: 500;
+    color: #2c3338;
+}
+
+.vidstream-status {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.vidstream-status-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.vidstream-status-failed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.vidstream-status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.vidstream-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.vidstream-badge-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.vidstream-badge-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.vidstream-meta-info p {
+    margin: 10px 0;
+}
+
+.vidstream-meta-info strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #2c3338;
+}
+
+.vidstream-meta-info code {
+    background: #f0f0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+#vidstream-sync-result .notice {
+    margin: 0;
+}
+
+.vidstream-info-section table {
+    margin-top: 15px;
+}
+
+.vidstream-info-section table td {
+    padding: 10px;
+}
+
+/* Column widths for video list */
+th.column-vidstream_thumbnail,
+td.column-vidstream_thumbnail {
+    width: 100px;
+}
+
+th.column-vidstream_status,
+td.column-vidstream_status {
+    width: 120px;
+}
+
+th.column-vidstream_duration,
+td.column-vidstream_duration {
+    width: 100px;
+}
