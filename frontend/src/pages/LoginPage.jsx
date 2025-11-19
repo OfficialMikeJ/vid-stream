@@ -139,9 +139,6 @@ const LoginPage = ({ onLogin }) => {
               >
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
-              <p className="text-sm text-slate-400 text-center mt-4">
-                Default credentials: <span className="text-indigo-400 font-mono">admin / admin123</span>
-              </p>
             </form>
           ) : (
             <form onSubmit={handlePasswordChange} className="space-y-5">
