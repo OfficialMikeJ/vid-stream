@@ -1,0 +1,266 @@
+/* StreamLab Invites Admin Styles */
+
+.streamlab-invites-admin {
+    max-width: 1400px;
+}
+
+.streamlab-invites-content {
+    background: #fff;
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+/* Stats Grid */
+.streamlab-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.streamlab-stat-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.2s;
+}
+
+.streamlab-stat-card:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 24px;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+}
+
+/* Generate Section */
+.streamlab-generate-section {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.streamlab-generate-section h2 {
+    margin-bottom: 10px;
+}
+
+.streamlab-generate-form {
+    margin: 30px 0;
+}
+
+.streamlab-generate-form .form-field {
+    margin-bottom: 20px;
+}
+
+.streamlab-generate-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.streamlab-generate-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#generate-code-btn {
+    font-size: 16px;
+    padding: 12px 30px;
+}
+
+.streamlab-code-display {
+    background: #f0fdf4;
+    border: 2px solid #10b981;
+    border-radius: 12px;
+    padding: 40px;
+    margin-top: 30px;
+}
+
+.code-success-icon {
+    width: 60px;
+    height: 60px;
+    background: #10b981;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: #fff;
+    font-size: 32px;
+}
+
+.generated-code {
+    font-size: 36px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: #059669;
+    margin: 20px 0;
+    letter-spacing: 2px;
+}
+
+#copy-code-btn {
+    margin-top: 15px;
+}
+
+.code-info {
+    margin-top: 20px;
+    color: #6b7280;
+}
+
+/* Manage Codes */
+.streamlab-manage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.streamlab-code {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    background: #f3f4f6;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-used {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-revoked {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.uses-indicator {
+    font-weight: 600;
+    color: #4f46e5;
+}
+
+.action-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.action-generated {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.action-used {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.action-revoked {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.action-deleted {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+/* Roles & Permissions */
+.streamlab-roles-info .info-box {
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
+    padding: 20px;
+    margin-bottom: 30px;
+    display: flex;
+    gap: 15px;
+}
+
+.streamlab-roles-info .info-box .dashicons {
+    font-size: 24px;
+    color: #3b82f6;
+}
+
+.streamlab-roles-info .info-box h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.capabilities-count {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+    .streamlab-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .streamlab-manage-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filter-buttons {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+}

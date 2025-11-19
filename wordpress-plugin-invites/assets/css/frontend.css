@@ -1,0 +1,248 @@
+/* StreamLab Invites Frontend Styles */
+
+.streamlab-invite-gate {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.streamlab-invite-container {
+    width: 100%;
+    max-width: 500px;
+}
+
+.streamlab-invite-content {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 50px 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+.streamlab-invite-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+.streamlab-invite-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 15px;
+    line-height: 1.2;
+}
+
+.streamlab-invite-message {
+    font-size: 16px;
+    color: #6b7280;
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.streamlab-invite-form {
+    margin-top: 30px;
+}
+
+.streamlab-invite-input-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.streamlab-invite-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.streamlab-invite-input {
+    width: 100%;
+    padding: 15px 20px;
+    font-size: 18px;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    transition: all 0.3s;
+    text-align: center;
+}
+
+.streamlab-invite-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.streamlab-invite-input::placeholder {
+    color: #d1d5db;
+    font-weight: 400;
+}
+
+.streamlab-invite-error {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 12px;
+    color: #991b1b;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.streamlab-invite-button {
+    width: 100%;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.streamlab-invite-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.streamlab-invite-button:active {
+    transform: translateY(0);
+}
+
+.streamlab-invite-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.button-loader {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Registration Form */
+.streamlab-register-form {
+    max-width: 500px;
+    margin: 50px auto;
+    padding: 40px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.streamlab-register-form h2 {
+    margin-top: 0;
+    margin-bottom: 30px;
+    text-align: center;
+    color: #1f2937;
+}
+
+.streamlab-errors {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.streamlab-errors .error {
+    color: #991b1b;
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.streamlab-form-field {
+    margin-bottom: 20px;
+}
+
+.streamlab-form-field label {
+    display: block;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.streamlab-form-field input {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.streamlab-form-field input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.streamlab-form-field small {
+    display: block;
+    margin-top: 5px;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.streamlab-submit-button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.streamlab-submit-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .streamlab-invite-content {
+        padding: 40px 30px;
+    }
+    
+    .streamlab-invite-title {
+        font-size: 24px;
+    }
+    
+    .streamlab-invite-input {
+        font-size: 16px;
+    }
+    
+    .streamlab-register-form {
+        padding: 30px 20px;
+    }
+}
