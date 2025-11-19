@@ -125,6 +125,8 @@ cp .env.example .env
 
 ### 5. Start the Application
 
+> **📘 For Production Deployment:** See [PRODUCTION-GUIDE.md](PRODUCTION-GUIDE.md) for complete production setup with Nginx, Supervisor, SSL, and security configuration.
+
 #### Development Mode
 
 **Backend:**
