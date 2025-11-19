@@ -140,18 +140,41 @@ cd frontend
 yarn start
 ```
 
-#### Production Mode
+#### Production Deployment
 
-Use a process manager like Supervisor or PM2:
+**Essential Files for Production:**
 
-**Supervisor Configuration** (recommended):
+```
+📦 VidStream Production Files
+├── backend/
+│   ├── server.py              ✅ Core backend application
+│   ├── requirements.txt       ✅ Python dependencies
+│   ├── .env                   ✅ Environment variables (configure for production)
+│   └── video_storage/         ✅ Created automatically (stores uploads)
+│
+├── frontend/
+│   ├── package.json           ✅ Node dependencies
+│   ├── src/                   ✅ React application source
+│   ├── public/                ✅ Static assets
+│   └── .env                   ✅ Frontend config (set REACT_APP_BACKEND_URL)
+│
+└── .gitignore                 ✅ Exclude video_storage, node_modules, .env
+```
+
+**Production Setup (Supervisor - Recommended):**
+
+Create `/etc/supervisor/conf.d/vidstream.conf`:
+
 ```ini
 [program:vidstream-backend]
-command=/path/to/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001
+command=/path/to/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001 --workers 4
 directory=/path/to/vidstream/backend
 autostart=true
 autorestart=true
 user=www-data
+environment=PATH="/path/to/venv/bin"
+stdout_logfile=/var/log/vidstream/backend.log
+stderr_logfile=/var/log/vidstream/backend-error.log
 
 [program:vidstream-frontend]
 command=/usr/bin/yarn start
@@ -159,6 +182,26 @@ directory=/path/to/vidstream/frontend
 autostart=true
 autorestart=true
 user=www-data
+environment=NODE_ENV="production"
+stdout_logfile=/var/log/vidstream/frontend.log
+stderr_logfile=/var/log/vidstream/frontend-error.log
+```
+
+**Start Services:**
+```bash
+# Create log directory
+sudo mkdir -p /var/log/vidstream
+
+# Reload supervisor
+sudo supervisorctl reread
+sudo supervisorctl update
+
+# Start services
+sudo supervisorctl start vidstream-backend
+sudo supervisorctl start vidstream-frontend
+
+# Check status
+sudo supervisorctl status
 ```
 
 ## ⚙️ Configuration
