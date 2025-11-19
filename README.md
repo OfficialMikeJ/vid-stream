@@ -204,6 +204,40 @@ sudo supervisorctl start vidstream-frontend
 sudo supervisorctl status
 ```
 
+## 📋 Production Deployment Checklist
+
+### Pre-Deployment
+- [ ] Install system dependencies (FFmpeg, MongoDB, Python 3.11+, Node.js 18+)
+- [ ] Create virtual environment for Python
+- [ ] Install backend dependencies: `pip install -r requirements.txt`
+- [ ] Install frontend dependencies: `cd frontend && yarn install`
+- [ ] Set up MongoDB database
+- [ ] Configure environment variables (see below)
+
+### Essential Files Only
+**Backend (4 files):**
+- `server.py` - Main FastAPI application
+- `requirements.txt` - Python packages
+- `.env` - Environment configuration
+- `video_storage/` - Auto-created on first run
+
+**Frontend (3 folders):**
+- `src/` - React application
+- `public/` - Static assets
+- `.env` - Frontend configuration
+
+### Post-Deployment
+- [ ] Configure Nginx reverse proxy (see configuration below)
+- [ ] Set up Supervisor for process management
+- [ ] Test video upload and processing
+- [ ] Verify HLS streaming works
+- [ ] Set up SSL certificate (Let's Encrypt recommended)
+- [ ] Configure firewall (ports 80, 443, 8001 internal)
+- [ ] Set up automated backups for MongoDB
+- [ ] Monitor logs: `/var/log/vidstream/`
+
+---
+
 ## ⚙️ Configuration
 
 ### Backend Environment Variables (`backend/.env`)
