@@ -114,15 +114,15 @@ Send the generated code to users via:
 
 **Without Code:**
 1. User visits site
-2. Sees invite gate with your custom message
+2. Sees invite gate with clear 3-step instructions
 3. Cannot access content
 
-**With Code:**
-1. User enters invite code
-2. Code is verified (1st use)
-3. Redirected to registration page
-4. Completes registration (2nd use)
-5. Gains full site access
+**With Code (2-Use System):**
+1. **First Use:** User pastes invite code and clicks "Submit"
+2. Code is verified → User redirected to registration page
+3. **Second Use:** User pastes same code during registration
+4. Account created → User gains full site access
+5. Code marked as "used" and tied to user's email
 
 ### 4. Manage Codes
 
