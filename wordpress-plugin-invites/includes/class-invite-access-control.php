@@ -145,11 +145,26 @@ class StreamLab_Invite_Access_Control {
                     
                     <h1 class="streamlab-invite-title"><?php _e('Invite Only Access', 'streamlab-invites'); ?></h1>
                     
-                    <p class="streamlab-invite-message" data-testid="invite-message"><?php echo esc_html($message); ?></p>
+                    <p class="streamlab-invite-message" data-testid="invite-message"><?php echo nl2br(esc_html($message)); ?></p>
+                    
+                    <div class="streamlab-invite-steps">
+                        <div class="step-item">
+                            <span class="step-number">1</span>
+                            <span class="step-text"><?php _e('Paste your invite code', 'streamlab-invites'); ?></span>
+                        </div>
+                        <div class="step-item">
+                            <span class="step-number">2</span>
+                            <span class="step-text"><?php _e('Click Submit to verify', 'streamlab-invites'); ?></span>
+                        </div>
+                        <div class="step-item">
+                            <span class="step-number">3</span>
+                            <span class="step-text"><?php _e('Paste code again to complete registration', 'streamlab-invites'); ?></span>
+                        </div>
+                    </div>
                     
                     <form id="streamlab-invite-form" class="streamlab-invite-form" data-testid="invite-form">
                         <div class="streamlab-invite-input-group">
-                            <label for="invite-code" class="streamlab-invite-label"><?php _e('Enter Invite Code', 'streamlab-invites'); ?></label>
+                            <label for="invite-code" class="streamlab-invite-label"><?php _e('Invite Code', 'streamlab-invites'); ?></label>
                             <input 
                                 type="text" 
                                 id="invite-code" 
@@ -164,7 +179,7 @@ class StreamLab_Invite_Access_Control {
                         <div class="streamlab-invite-error" id="invite-error" style="display:none;" data-testid="invite-error"></div>
                         
                         <button type="submit" class="streamlab-invite-button" data-testid="verify-invite-button">
-                            <span class="button-text"><?php _e('Verify Code', 'streamlab-invites'); ?></span>
+                            <span class="button-text"><?php _e('Submit', 'streamlab-invites'); ?></span>
                             <span class="button-loader" style="display:none;">
                                 <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
