@@ -313,8 +313,8 @@ class StreamLab_Invite_Admin {
                     <tr>
                         <th scope="row"><?php _e('Invite Gate Message', 'streamlab-invites'); ?></th>
                         <td>
-                            <input type="text" name="streamlab_invites_message" value="<?php echo esc_attr(get_option('streamlab_invites_message', 'Please contact us for an invite access code.')); ?>" class="large-text" data-testid="invite-message">
-                            <p class="description"><?php _e('Message displayed to users without an invite code', 'streamlab-invites'); ?></p>
+                            <textarea name="streamlab_invites_message" class="large-text" rows="3" data-testid="invite-message"><?php echo esc_textarea(get_option('streamlab_invites_message', 'Please paste your invite code and click "Submit", paste your invite code once more to finish registration for full access.')); ?></textarea>
+                            <p class="description"><?php _e('Message displayed to users without an invite code (supports multi-line)', 'streamlab-invites'); ?></p>
                         </td>
                     </tr>
                     
