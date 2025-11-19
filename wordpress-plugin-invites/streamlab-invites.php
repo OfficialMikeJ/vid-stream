@@ -204,7 +204,7 @@ class StreamLab_Invites {
         // Set default options
         if (!get_option('streamlab_invites_enabled')) {
             add_option('streamlab_invites_enabled', 'yes');
-            add_option('streamlab_invites_message', 'Please contact us for an invite access code.');
+            add_option('streamlab_invites_message', 'Please paste your invite code and click "Submit", paste your invite code once more to finish registration for full access.');
             add_option('streamlab_invites_locked_pages', array());
             add_option('streamlab_invites_allow_homepage', 'no');
             add_option('streamlab_invites_redirect_url', home_url());
