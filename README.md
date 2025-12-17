@@ -1,9 +1,9 @@
-# VidStream - Video Hosting Service
+# StreamHost - Video Hosting Service
 
 A powerful, self-hosted video hosting platform with FFmpeg processing, HLS streaming, and customizable embed options. Upload, process, organize, and stream videos with ease.
 
-![VidStream Dashboard](https://img.shields.io/badge/Status-Production%20Ready-success)
-![License](https://img.shields.io/badge/License-MIT-blue)
+![StreamHost Dashboard](https://img.shields.io/badge/Status-Production%20Ready-success)
+![Version](https://img.shields.io/badge/Version-2025.12.17-blue)
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![React](https://img.shields.io/badge/React-19.0-61dafb)
 
@@ -11,6 +11,7 @@ A powerful, self-hosted video hosting platform with FFmpeg processing, HLS strea
 
 ### Video Management
 - **Multi-format Support** - Upload any FFmpeg-compatible video format (MP4, MOV, AVI, MKV, WebM, FLV, WMV, MPEG, etc.)
+- **Large File Support** - Upload videos up to 56GB
 - **Automatic Processing Pipeline**
   - Metadata extraction (duration, resolution, aspect ratio)
   - Automatic thumbnail generation from video content
@@ -36,11 +37,16 @@ A powerful, self-hosted video hosting platform with FFmpeg processing, HLS strea
 - **Bcrypt Hashing** - Industry-standard password security
 
 ### User Interface
-- **Modern Dark Theme** - Beautiful glassmorphism design with gradient accents
+- **Modern Dark Theme** - Black/Gray backgrounds with colored button accents
 - **Responsive Layout** - Works seamlessly on desktop and mobile devices
 - **Drag & Drop Upload** - Intuitive file upload with progress tracking
 - **Video Grid Library** - Organized video display with thumbnails
 - **Inline Video Player** - Play videos directly in the dashboard
+
+### Desktop Application
+- **Cross-Platform** - Python Tkinter-based desktop client
+- **Full Feature Parity** - Login, upload, manage videos, folders
+- **Windows Batch Scripts** - Double-click to install and run
 
 ## 🛠️ Tech Stack
 
@@ -61,6 +67,11 @@ A powerful, self-hosted video hosting platform with FFmpeg processing, HLS strea
 - **Axios** - HTTP client for API calls
 - **Sonner** - Toast notifications
 
+### Desktop App
+- **Python 3.8+** - Cross-platform compatibility
+- **Tkinter + ttkbootstrap** - Modern dark-themed UI
+- **Requests** - API communication
+
 ## 📋 Prerequisites
 
 - Python 3.11+
@@ -75,8 +86,8 @@ A powerful, self-hosted video hosting platform with FFmpeg processing, HLS strea
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/vidstream.git
-cd vidstream
+git clone https://github.com/yourusername/streamhost.git
+cd streamhost
 ```
 
 ### 2. Install System Dependencies
@@ -142,103 +153,50 @@ cd frontend
 yarn start
 ```
 
-#### Production Deployment
+## 🖥️ Desktop Application
 
-**Essential Files for Production:**
+The StreamHost Desktop Application provides the same features as the web interface in a native desktop experience.
 
-```
-📦 VidStream Production Files
-├── backend/
-│   ├── server.py              ✅ Core backend application
-│   ├── requirements.txt       ✅ Python dependencies
-│   ├── .env                   ✅ Environment variables (configure for production)
-│   └── video_storage/         ✅ Created automatically (stores uploads)
-│
-├── frontend/
-│   ├── package.json           ✅ Node dependencies
-│   ├── src/                   ✅ React application source
-│   ├── public/                ✅ Static assets
-│   └── .env                   ✅ Frontend config (set REACT_APP_BACKEND_URL)
-│
-└── .gitignore                 ✅ Exclude video_storage, node_modules, .env
-```
+### Installation (Windows)
 
-**Production Setup (Supervisor - Recommended):**
+1. Navigate to the `desktop-app` folder
+2. Double-click `StreamHost.bat`
+3. The script will:
+   - Check Python installation
+   - Create a virtual environment
+   - Install dependencies
+   - Launch the application
 
-Create `/etc/supervisor/conf.d/vidstream.conf`:
+### Files
 
-```ini
-[program:vidstream-backend]
-command=/path/to/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001 --workers 4
-directory=/path/to/vidstream/backend
-autostart=true
-autorestart=true
-user=www-data
-environment=PATH="/path/to/venv/bin"
-stdout_logfile=/var/log/vidstream/backend.log
-stderr_logfile=/var/log/vidstream/backend-error.log
+| File | Purpose |
+|------|---------|
+| `StreamHost.bat` | Main launcher (first-time setup + run) |
+| `StreamHost_QuickStart.bat` | Fast launcher (skips setup) |
+| `Install_Dependencies.bat` | Install only (no launch) |
+| `streamhost_desktop.py` | Main application |
+| `requirements.txt` | Python dependencies |
 
-[program:vidstream-frontend]
-command=/usr/bin/yarn start
-directory=/path/to/vidstream/frontend
-autostart=true
-autorestart=true
-user=www-data
-environment=NODE_ENV="production"
-stdout_logfile=/var/log/vidstream/frontend.log
-stderr_logfile=/var/log/vidstream/frontend-error.log
-```
+### Running Manually
 
-**Start Services:**
 ```bash
-# Create log directory
-sudo mkdir -p /var/log/vidstream
+cd desktop-app
 
-# Reload supervisor
-sudo supervisorctl reread
-sudo supervisorctl update
+# Create virtual environment
+python -m venv venv
 
-# Start services
-sudo supervisorctl start vidstream-backend
-sudo supervisorctl start vidstream-frontend
+# Activate (Windows)
+venv\Scripts\activate
 
-# Check status
-sudo supervisorctl status
+# Activate (Linux/Mac)
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run
+python streamhost_desktop.py
 ```
-
-## 📋 Production Deployment Checklist
-
-### Pre-Deployment
-- [ ] Install system dependencies (FFmpeg, MongoDB, Python 3.11+, Node.js 18+)
-- [ ] Create virtual environment for Python
-- [ ] Install backend dependencies: `pip install -r requirements.txt`
-- [ ] Install frontend dependencies: `cd frontend && yarn install`
-- [ ] Set up MongoDB database
-- [ ] Configure environment variables (see below)
-
-### Essential Files Only
-**Backend (4 files):**
-- `server.py` - Main FastAPI application
-- `requirements.txt` - Python packages
-- `.env` - Environment configuration
-- `video_storage/` - Auto-created on first run
-
-**Frontend (3 folders):**
-- `src/` - React application
-- `public/` - Static assets
-- `.env` - Frontend configuration
-
-### Post-Deployment
-- [ ] Configure Nginx reverse proxy (see configuration below)
-- [ ] Set up Supervisor for process management
-- [ ] Test video upload and processing
-- [ ] Verify HLS streaming works
-- [ ] Set up SSL certificate (Let's Encrypt recommended)
-- [ ] Configure firewall (ports 80, 443, 8001 internal)
-- [ ] Set up automated backups for MongoDB
-- [ ] Monitor logs: `/var/log/vidstream/`
-
----
 
 ## ⚙️ Configuration
 
@@ -247,7 +205,7 @@ sudo supervisorctl status
 ```bash
 # MongoDB Configuration
 MONGO_URL="mongodb://localhost:27017"
-DB_NAME="vidstream_db"
+DB_NAME="streamhost_db"
 
 # Security
 JWT_SECRET="your-super-secret-jwt-key-change-this"
@@ -267,14 +225,21 @@ REACT_APP_BACKEND_URL=http://localhost:8001
 WDS_SOCKET_PORT=3000
 ```
 
+### Desktop App Configuration (`desktop-app/.env`)
+
+```bash
+# StreamHost API URL
+STREAMHOST_API_URL=http://localhost:8001
+```
+
 ## 📖 Usage Guide
 
 ### First Time Login
 
 1. Navigate to `http://localhost:3000` (or your configured URL)
 2. Login with default credentials:
-   - **Username:** `admin`
-   - **Password:** `admin123`
+   - **Username:** `StreamHost`
+   - **Password:** `password1234!@#`
 3. You'll be prompted to change your password (security requirement)
 4. Set a new secure password and access the dashboard
 
@@ -341,7 +306,7 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "username": "admin",
+  "username": "StreamHost",
   "password": "your_password"
 }
 
@@ -500,7 +465,7 @@ Authorization: Bearer {token}
 ## 📁 Project Structure
 
 ```
-vidstream/
+streamhost/
 ├── backend/
 │   ├── server.py              # FastAPI application
 │   ├── requirements.txt       # Python dependencies
@@ -523,12 +488,21 @@ vidstream/
 │   │       ├── VideoPlayer.jsx
 │   │       ├── FolderManagement.jsx
 │   │       ├── VideoSettings.jsx
-│   │       └── EmbedSettingsDialog.jsx
+│   │       ├── EmbedSettingsDialog.jsx
+│   │       └── Footer.jsx
 │   ├── package.json           # Node dependencies
 │   └── .env                   # Frontend configuration
 │
-├── tests/                     # Test files
+├── desktop-app/
+│   ├── streamhost_desktop.py  # Desktop application
+│   ├── requirements.txt       # Python dependencies
+│   ├── StreamHost.bat         # Windows launcher
+│   ├── StreamHost_QuickStart.bat
+│   ├── Install_Dependencies.bat
+│   └── README.md              # Desktop app documentation
+│
 ├── README.md                  # This file
+├── PRODUCTION-GUIDE.md        # Production deployment guide
 └── LICENSE                    # License information
 ```
 
@@ -563,7 +537,7 @@ server {
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;
 
-    client_max_body_size 2G;
+    client_max_body_size 60G;
 
     location /api {
         proxy_pass http://localhost:8001;
@@ -600,7 +574,7 @@ server {
 **Solutions:**
 - Verify MongoDB is running: `systemctl status mongodb`
 - Check admin user exists in database
-- Reset admin password using backend script
+- Default credentials: `StreamHost` / `password1234!@#`
 - Clear browser cache and cookies
 
 ### Streaming Not Working
@@ -613,35 +587,15 @@ server {
 - Test HLS URL directly in browser
 - Check browser console for errors
 
-### High Server Load
+### Desktop App Issues
 
-**Issue:** Server slow during video processing
+**Issue:** Desktop app won't start
 
 **Solutions:**
-- Process videos one at a time
-- Increase server resources (CPU/RAM)
-- Optimize FFmpeg settings
-- Use queue system for batch processing
-
-## 🚦 Performance Optimization
-
-### Video Processing
-- Use hardware acceleration if available: `-hwaccel cuda`
-- Adjust HLS segment size (default: 10 seconds)
-- Lower transcoding quality for faster processing
-- Implement background job queue (Celery/Redis)
-
-### Database
-- Create indexes on frequently queried fields
-- Use MongoDB aggregation for complex queries
-- Implement caching layer (Redis)
-- Regular database maintenance
-
-### Frontend
-- Enable production build for React
-- Implement lazy loading for video thumbnails
-- Use CDN for static assets
-- Enable gzip compression
+- Ensure Python 3.8+ is installed
+- Check "Add Python to PATH" was selected during install
+- Run `Install_Dependencies.bat` first
+- Check the API URL in `.env` file
 
 ## 📊 System Requirements
 
@@ -665,22 +619,15 @@ server {
 - Load balancer
 - CDN integration
 
-## 🤝 Contributing
+## 📝 Version History
 
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow PEP 8 for Python code
-- Use ESLint/Prettier for JavaScript
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation
+- **2025.12.17** - Current version
+  - Rebranded from VidStream to StreamHost
+  - New dark theme with colored buttons
+  - Added Desktop Application
+  - Added Player Customization settings
+  - Large file upload support (56GB)
+  - Copyright and version footer
 
 ## 📝 License
 
@@ -692,30 +639,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Shadcn/UI** - Beautiful React components
 - **HLS.js** - Seamless video streaming
 - **FastAPI** - Modern Python web framework
-
-## 📧 Support
-
-For issues, questions, or suggestions:
-- Open an issue on GitHub
-- Email: support@your-domain.com
-- Documentation: https://docs.your-domain.com
-
-## 🗺️ Roadmap
-
-### Upcoming Features
-- [ ] Multiple quality transcoding (480p, 720p, 1080p)
-- [ ] Video analytics and watch statistics
-- [ ] Subtitle support (.srt, .vtt)
-- [ ] Video trimming and editing
-- [ ] Batch upload support
-- [ ] User roles and permissions
-- [ ] API webhooks for processing events
-- [ ] Cloud storage integration (S3, Google Cloud)
-- [ ] Video compression optimization
-- [ ] Mobile app (React Native)
+- **ttkbootstrap** - Modern Tkinter themes
 
 ---
 
-**Made with ❤️ using FastAPI, React, and FFmpeg**
+**StreamHost Ver: 2025.12.17**
+
+**Copyright 2026 StreamHost**
 
 ⭐ Star this repo if you find it useful!
