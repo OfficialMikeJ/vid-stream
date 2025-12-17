@@ -84,7 +84,7 @@ const LoginPage = ({ onLogin }) => {
             <Film className="w-8 h-8 text-white" />
           </div>
           <CardTitle className="text-3xl font-bold text-white">
-            {mustChangePassword ? "Change Password" : "VidStream Admin"}
+            {mustChangePassword ? "Change Password" : "StreamHost Admin"}
           </CardTitle>
           <CardDescription className="text-slate-300">
             {mustChangePassword

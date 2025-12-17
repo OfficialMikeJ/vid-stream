@@ -36,7 +36,7 @@ const Dashboard = ({ onLogout }) => {
                 <Film className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">VidStream</h1>
+                <h1 className="text-xl font-bold text-white">StreamHost</h1>
                 <p className="text-xs text-slate-400">Admin Panel</p>
               </div>
             </div>
