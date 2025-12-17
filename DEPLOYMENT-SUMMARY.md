@@ -1,4 +1,4 @@
-# VidStream - Clean Production Deployment
+# StreamHost - Clean Production Deployment
 
 ## 📦 Minimal File Structure
 
@@ -31,7 +31,7 @@ sudo npm install -g yarn
 ### 2. Setup Backend
 ```bash
 # Create virtual env & install
-cd /var/www/vidstream/backend
+cd /var/www/streamhost/backend
 python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -39,14 +39,14 @@ pip install -r requirements.txt
 # Configure
 cat > .env << EOF
 MONGO_URL="mongodb://localhost:27017"
-DB_NAME="vidstream_production"
+DB_NAME="streamhost_production"
 JWT_SECRET="your-32-char-random-secret"
 EOF
 ```
 
 ### 3. Setup Frontend
 ```bash
-cd /var/www/vidstream/frontend
+cd /var/www/streamhost/frontend
 yarn install
 
 # Configure
@@ -55,17 +55,17 @@ echo 'REACT_APP_BACKEND_URL=https://your-domain.com' > .env
 
 ### 4. Configure Supervisor
 ```bash
-# Create /etc/supervisor/conf.d/vidstream.conf
-[program:vidstream-backend]
-command=/var/www/vidstream/backend/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001 --workers 4
-directory=/var/www/vidstream/backend
+# Create /etc/supervisor/conf.d/streamhost.conf
+[program:streamhost-backend]
+command=/var/www/streamhost/backend/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001 --workers 4
+directory=/var/www/streamhost/backend
 autostart=true
 autorestart=true
 user=www-data
 
-[program:vidstream-frontend]
+[program:streamhost-frontend]
 command=/usr/bin/yarn start
-directory=/var/www/vidstream/frontend
+directory=/var/www/streamhost/frontend
 autostart=true
 autorestart=true
 user=www-data
@@ -73,7 +73,7 @@ user=www-data
 
 ### 5. Configure Nginx
 ```bash
-# Create /etc/nginx/sites-available/vidstream
+# Create /etc/nginx/sites-available/streamhost
 server {
     listen 443 ssl;
     server_name your-domain.com;
@@ -102,7 +102,7 @@ sudo supervisorctl reread && sudo supervisorctl update
 sudo supervisorctl start all
 
 # Enable Nginx site
-sudo ln -s /etc/nginx/sites-available/vidstream /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/streamhost /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 
 # Get SSL certificate
@@ -126,7 +126,7 @@ sudo certbot --nginx -d your-domain.com
   ```
 - [ ] Configure automatic backups
 - [ ] Set correct file permissions (www-data:www-data)
-- [ ] Monitor logs in /var/log/vidstream/
+- [ ] Monitor logs in /var/log/streamhost/
 
 ---
 
@@ -139,14 +139,14 @@ sudo supervisorctl status
 
 **Restart Services:**
 ```bash
-sudo supervisorctl restart vidstream-backend
-sudo supervisorctl restart vidstream-frontend
+sudo supervisorctl restart streamhost-backend
+sudo supervisorctl restart streamhost-frontend
 ```
 
 **View Logs:**
 ```bash
-sudo tail -f /var/log/vidstream/backend.log
-sudo tail -f /var/log/vidstream/frontend.log
+sudo tail -f /var/log/streamhost/backend.log
+sudo tail -f /var/log/streamhost/frontend.log
 ```
 
 **Update Application:**
@@ -194,17 +194,17 @@ MongoDB Collections (auto-created):
 **Daily MongoDB Backup:**
 ```bash
 # Create backup script
-cat > /usr/local/bin/backup-vidstream.sh << 'EOF'
+cat > /usr/local/bin/backup-streamhost.sh << 'EOF'
 #!/bin/bash
 DATE=$(date +%Y%m%d)
-mongodump --db=vidstream_production --out=/var/backups/vidstream/mongo_$DATE
-find /var/backups/vidstream -mtime +7 -delete
+mongodump --db=streamhost_production --out=/var/backups/streamhost/mongo_$DATE
+find /var/backups/streamhost -mtime +7 -delete
 EOF
 
-chmod +x /usr/local/bin/backup-vidstream.sh
+chmod +x /usr/local/bin/backup-streamhost.sh
 
 # Schedule daily at 2 AM
-echo "0 2 * * * /usr/local/bin/backup-vidstream.sh" | sudo crontab -
+echo "0 2 * * * /usr/local/bin/backup-streamhost.sh" | sudo crontab -
 ```
 
 ---
@@ -213,7 +213,7 @@ echo "0 2 * * * /usr/local/bin/backup-vidstream.sh" | sudo crontab -
 
 **Services won't start?**
 ```bash
-sudo supervisorctl tail -f vidstream-backend stderr
+sudo supervisorctl tail -f streamhost-backend stderr
 ```
 
 **Videos won't upload?**
@@ -222,7 +222,7 @@ sudo supervisorctl tail -f vidstream-backend stderr
 df -h
 
 # Check permissions
-ls -la /var/www/vidstream/backend/video_storage/
+ls -la /var/www/streamhost/backend/video_storage/
 
 # Check Nginx upload limit
 sudo nginx -T | grep client_max_body_size

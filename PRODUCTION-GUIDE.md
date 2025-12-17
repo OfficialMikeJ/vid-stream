@@ -290,7 +290,7 @@ sudo systemctl status mongodb
 
 **Test in browser:**
 1. Visit https://your-domain.com
-2. Login with admin/admin123
+2. Login with StreamHost/password1234!@#
 3. Change password
 4. Upload a test video
 5. Verify processing and playback
@@ -577,7 +577,7 @@ Your StreamHost platform is now:
 **Default Access:**
 - URL: https://your-domain.com
 - Username: admin
-- Password: admin123 (change immediately!)
+- Password: password1234!@# (change immediately!)
 
 **Files Created:**
 - Backend: `server.py` + `requirements.txt` + `.env`
