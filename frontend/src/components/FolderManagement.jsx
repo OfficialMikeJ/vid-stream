@@ -80,25 +80,25 @@ const FolderManagement = () => {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-white mb-2">Folder Management</h2>
-          <p className="text-slate-400">Organize your videos into folders</p>
+          <p className="text-gray-500">Organize your videos into folders</p>
         </div>
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogTrigger asChild>
             <Button
               data-testid="create-folder-button"
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 gap-2"
+              className="bg-green-600 hover:bg-green-700 text-white gap-2"
             >
               <Plus className="w-4 h-4" />
               Create Folder
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-slate-950/95 border-white/10">
+          <DialogContent className="bg-gray-900 border-gray-800">
             <DialogHeader>
               <DialogTitle className="text-white">Create New Folder</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateFolder} className="space-y-4">
               <div>
-                <Label htmlFor="folder-name" className="text-slate-200">
+                <Label htmlFor="folder-name" className="text-gray-300">
                   Folder Name
                 </Label>
                 <Input
@@ -107,7 +107,7 @@ const FolderManagement = () => {
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   placeholder="Enter folder name"
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-gray-800 border-gray-700 text-white"
                   autoFocus
                 />
               </div>
@@ -123,7 +123,7 @@ const FolderManagement = () => {
                 <Button
                   type="submit"
                   data-testid="submit-folder-button"
-                  className="flex-1 bg-indigo-500 hover:bg-indigo-600"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                 >
                   Create
                 </Button>
@@ -134,11 +134,11 @@ const FolderManagement = () => {
       </div>
 
       {folders.length === 0 ? (
-        <Card className="bg-white/5 border-white/10 backdrop-blur-xl">
+        <Card className="bg-gray-900 border-gray-800">
           <CardContent className="p-12 text-center">
-            <FolderOpen className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+            <FolderOpen className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">No folders yet</h3>
-            <p className="text-slate-400">Create your first folder to organize videos</p>
+            <p className="text-gray-500">Create your first folder to organize videos</p>
           </CardContent>
         </Card>
       ) : (
@@ -146,18 +146,18 @@ const FolderManagement = () => {
           {folders.map((folder) => (
             <Card
               key={folder.id}
-              className="bg-white/5 border-white/10 backdrop-blur-xl hover:bg-white/10 transition-all duration-200 group"
+              className="bg-gray-900 border-gray-800 hover:bg-gray-800 transition-all duration-200 group"
               data-testid={`folder-card-${folder.id}`}
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center">
-                      <Folder className="w-6 h-6 text-indigo-400" />
+                    <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                      <Folder className="w-6 h-6 text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-white font-medium truncate">{folder.name}</h3>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-gray-500">
                         {new Date(folder.created_at).toLocaleDateString()}
                       </p>
                     </div>
