@@ -1,0 +1,82 @@
+version: '3.8'
+
+# StreamHost Docker Compose Configuration
+# Version: 2025.12.17
+# Compatible with Ubuntu 20.04+
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: streamhost-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: streamhost_db
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - streamhost-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Backend API (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: streamhost-backend
+    restart: unless-stopped
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=streamhost_db
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:8001}
+    volumes:
+      - video_storage:/app/video_storage
+    ports:
+      - "8001:8001"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - streamhost-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-http://localhost:8001}
+    container_name: streamhost-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - streamhost-network
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  video_storage:
+    driver: local
+
+networks:
+  streamhost-network:
+    driver: bridge
