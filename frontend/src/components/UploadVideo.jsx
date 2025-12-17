@@ -81,8 +81,20 @@ const UploadVideo = () => {
       return;
     }
 
+    // Check file size (56GB max)
+    const maxSize = 56 * 1024 * 1024 * 1024; // 56GB
+    if (file.size > maxSize) {
+      toast.error("File too large. Maximum size is 56GB.");
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
+    
+    // Show info for large files
+    if (file.size > 1024 * 1024 * 1024) { // > 1GB
+      toast.info(`Uploading large file (${(file.size / 1024 / 1024 / 1024).toFixed(2)}GB). This may take a while...`);
+    }
 
     const formData = new FormData();
     formData.append("file", file);
