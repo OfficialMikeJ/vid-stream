@@ -190,6 +190,8 @@ async def initialize_admin_user():
             doc['created_at'] = doc['created_at'].isoformat()
             await db.users.insert_one(doc)
             logger.info("Admin user recreated after error")
+        except Exception as inner_e:
+            logger.error(f"Failed to recreate admin user: {str(inner_e)}")
 
 # Auth endpoints
 @api_router.post("/auth/login")
