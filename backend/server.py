@@ -193,6 +193,23 @@ async def initialize_admin_user():
         except Exception as inner_e:
             logger.error(f"Failed to recreate admin user: {str(inner_e)}")
 
+
+# Health check endpoint for Docker/Kubernetes
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint for container orchestration"""
+    try:
+        # Check MongoDB connection
+        await db.command("ping")
+        return {
+            "status": "healthy",
+            "service": "StreamHost API",
+            "version": "2025.12.17",
+            "database": "connected"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Service unhealthy: {str(e)}")
+
 # Auth endpoints
 @api_router.post("/auth/login")
 async def login(request: LoginRequest):
