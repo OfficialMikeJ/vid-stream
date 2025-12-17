@@ -1,0 +1,178 @@
+<analysis>**original_problem_statement:**
+The user wants to build a video hosting service named VidStream.
+
+**PRODUCT REQUIREMENTS:**
+- **Core Platform:**
+    - Upload videos, which get processed using FFmpeg.
+    - Generate thumbnails from video footage.
+    - Videos can be embedded and streamed to custom websites.
+    - Features: custom folders, aspect ratio settings, custom video settings.
+    - Storage: Local via MongoDB GridFS.
+    - Authentication: A single admin user with a default username/password (/) that must be changed upon first login.
+    - Video Format Support: All formats supported by FFmpeg.
+    - Streaming: Custom settings for embedding, like domain restriction and player color customization.
+    - File Uploads: Support large file uploads up to 56GB.
+- **WordPress Integration:**
+    - **Plugin 1 (VidStream Connector):** A plugin for a Netflix style WordPress theme (Streamlab) that connects to the VidStream API and auto-imports media to the WordPress site.
+    - **Plugin 2 (Invite System):** A plugin to lock the WordPress site behind an invite code system.
+        - Features: Generate random codes, limit code usage, track used codes, and manage user roles/permissions securely.
+        - The UI message for the invite system should be clear and work for future Desktop and Android app integrations.
+- **Desktop Application:**
+    - A Python-based desktop application with the same features as the web portal.
+- **UI/UX Requests:**
+    - Remove the default credentials from being displayed on the login page.
+    - Change the browser tab title to VidStream.
+    - Clean up the Production Deployment section in the .
+
+**User's preferred language**: English
+
+**what currently exists?**
+A full-stack application (FastAPI backend, React frontend) has been developed with a basic UI for login, a dashboard, video library, and upload functionality. JWT-based authentication is implemented, which forces a password change on the first login for the default admin user.
+
+Two WordPress plugins have been created and packaged into  files:
+1.  : To sync videos with a WordPress theme.
+2.  : To add an invite-only system to a WordPress site.
+
+A skeleton for a Python Tkinter desktop application has been created. The backend has been configured to support large file uploads.
+
+**Last working item**:
+The agent was about to begin implementing the video player customization feature.
+
+- **Last item agent was working:** Starting the implementation of the Player Customization feature. The plan was to first create the necessary database model and API endpoints in the backend.
+- **Status:** NOT STARTED
+- **Agent Testing Done:** N
+- **Which testing method agent to use?** backend testing agent
+- **User Testing Done:** N
+
+**All Pending/In progress Issue list**:
+-   **Issue 1: Recurring Admin Login Failure (P0)**
+    -   **Description:** The default  user account disappears or gets reset between sessions, repeatedly causing login failures with Invalid credentials. The user cannot reliably access the application. This is a critical, recurring blocker.
+    -   **Attempted fixes:** The agent has manually recreated the admin user multiple times using a script. This is a temporary workaround and does not solve the root cause.
+    -   **Next debug checklist:**
+        1.  **Implement a self-healing startup routine:** Modify  to check for the existence of the 'admin' user on application startup. If the user does not exist, create it with the default credentials.
+        2.  **Investigate data persistence:** Check if the MongoDB data volume is correctly configured to persist data across container restarts.
+        3.  **Review for conflicting scripts:** Examine the codebase for any script or test utility that might be clearing the  collection.
+    -   **Why fix this issue and what will be achieved with the fix?** This will provide a stable and reliable login experience, which is essential for the user to test and use any other feature of the application.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Blocked on other issue:** None
+
+**In progress Task List**:
+-   **Task 1: Python Desktop Application (P1)**
+    -   **Description:** Build out the functionality for the Python desktop application.
+    -   **Where to resume:** The basic file structure () and dependencies () are created. The next step is to build the Tkinter UI for login, video listing, and uploading, and to implement the API client logic to communicate with the VidStream backend.
+    -   **What will be achieved with this?** A functional desktop client for the VidStream service.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Backend (as the desktop app is a new frontend)
+    -   **Blocked on something:** Blocked on **Issue 1**, as the desktop app will require a stable login API.
+
+**Upcoming and Future Tasks**
+- **Upcoming Tasks:**
+  - **Task 1: Implement Player Customization Options (P0)**
+    - **File & Method:** Start in .
+    - **Description:** Add a new Pydantic model and a MongoDB collection for player settings. Create CRUD API endpoints to manage these settings. Then, build a new settings component in the React frontend to allow the user to change player theme and appearance.
+  - **Task 2: User Testing for WordPress Plugins (P2)**
+    - **Description:** The user needs to test the two created WordPress plugins ( and ) in their local WordPress environment. The agent should be prepared to debug any issues reported by the user.
+
+**Completed work in this session**
+- **VidStream Application MVP:**
+  - FastAPI backend and React frontend setup.
+  - JWT Authentication with forced password change on first login.
+  - UI for Login, Dashboard, and placeholders for video management.
+- **Large File Uploads:**
+  - Backend and frontend configured to handle uploads up to 56GB with progress tracking.
+- **WordPress Plugins:**
+  - **VidStream Connector:** Created and packaged into .
+  - **StreamLab Invites:** Created, updated with clearer UI text, and packaged into .
+- **UI/UX Improvements:**
+  - Removed hardcoded default credentials from the login page ().
+  - Updated the browser tab title to VidStream ().
+- **Documentation:**
+  - Created and updated , , and other documentation files for the main app and plugins.
+
+**Earlier issues found/mentioned but not fixed**
+- The only major unfixed issue is the **Recurring Admin Login Failure**, which is detailed in the All Pending/In progress Issue list section.
+
+**Known issue recurrence from previous fork**
+-   Not applicable.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+-   **Backend:** FastAPI, Python, MongoDB (with Motor async driver), JWT for authentication, FFmpeg for video processing.
+-   **Frontend:** React, JavaScript,  for API calls, CSS.
+-   **Desktop App:** Python, Tkinter.
+-   **WordPress:** PHP for plugin development.
+
+**key DB schema**
+-   **users:** 
+-   *(Implicitly created/planned collections for videos, folders, and player_settings)*
+
+**changes in tech stack**
+-   The desktop application technology was switched from **PyQt6** to **Tkinter** due to system dependency issues in the environment.
+
+**All files of reference**
+-   : Main backend application logic, including auth, API endpoints, and file upload handling.
+-   : Frontend login page. Hardcoded credentials were removed from here.
+-   : Main HTML file where the browser tab title was changed.
+-   : Packaged WordPress plugin for theme integration.
+-   : Packaged WordPress plugin for the invite system.
+-   : Main file for the new desktop application.
+-   , : Core project documentation.
+
+**Areas that need refactoring**:
+-   The backend startup logic in  needs to be refactored to ensure the admin user's persistence, as noted in the pending issues.
+
+**key api endpoints**
+-   : POST, for user authentication.
+-   : POST, for the mandatory password change.
+-   : POST, for uploading video files.
+-   *(Implicitly required endpoints for managing folders, videos, and player settings)*
+
+**Critical Info for New Agent**
+-   The most critical issue is the **recurring login failure**. The user cannot use the app until this is permanently resolved. Your first action should be to implement a check on backend startup that creates the  user if it doesn't exist.
+-   The two WordPress plugins are considered complete but are **untested by the user**. Be prepared for bug reports once the user tests them in their local WordPress environment.
+-   The desktop application is in its very early stages. You will need to build its UI and functionality from the ground up using Tkinter.
+
+**documents created in this job**
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+-   
+
+**Last 10 User Messages and any pending user messages**
+1.  **User:** Asks to clean up the deployment section in the . (Completed)
+2.  **User:** Asks if VidStream is fully functional yet. (Agent investigated and found login broken)
+3.  **User:** Reports that neither the new password nor the default password works. (Agent reset the password again)
+4.  **User:** Requests to remove the default username/password text from the login page for security. (Completed)
+5.  **User:** Requests to change the browser tab title to VidStream and states that's all for now. (Completed)
+6.  **User:** Provides new UI text for the invite plugin to support future Desktop/Android apps. (Completed)
+7.  **User:** Requests to add new features: 56GB file uploads, a Python Desktop App, and player customization options for the web. (In Progress)
+
+**Project Health Check:**
+-   **Broken:** The core VidStream application is broken due to the recurring login issue, which prevents user access.
+
+**3rd Party Integrations**
+-   None.
+
+**Testing status**
+-   **Testing agent used after significant changes:** YES (but it missed the non-persistent user issue).
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:** None.
+-   **Known regressions:** The admin user account is not persistent.
+
+**Credentials to test flow:**
+-   **Username:** 
+-   **Password:** 
+-   **Note:** The system will force a password change on the first successful login. This entire flow is currently unreliable due to the main pending issue.
+
+**What agent forgot to execute**
+- The agent did not identify and fix the root cause of the admin user being deleted. It repeatedly applied a temporary fix (manual user creation) instead of implementing a permanent solution, leading to a recurring problem for the user.</analysis>
