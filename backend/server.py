@@ -218,6 +218,15 @@ async def upload_video(
     folder_id: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user)
 ):
+    # Check file size (56GB max)
+    max_size = 56 * 1024 * 1024 * 1024  # 56GB in bytes
+    file.file.seek(0, 2)  # Seek to end
+    file_size = file.file.tell()
+    file.file.seek(0)  # Reset to beginning
+    
+    if file_size > max_size:
+        raise HTTPException(status_code=413, detail=f"File too large. Maximum size is 56GB.")
+    
     video_id = str(uuid.uuid4())
     file_extension = Path(file.filename).suffix
     original_path = VIDEO_STORAGE_PATH / "originals" / f"{video_id}{file_extension}"
