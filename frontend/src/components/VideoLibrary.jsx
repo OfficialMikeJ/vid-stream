@@ -122,15 +122,15 @@ const VideoLibrary = () => {
     <div className="p-8" data-testid="video-library">
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-white mb-2">Video Library</h2>
-        <p className="text-slate-400">Manage and organize your video content</p>
+        <p className="text-gray-500">Manage and organize your video content</p>
       </div>
 
       {videos.length === 0 ? (
-        <Card className="bg-white/5 border-white/10 backdrop-blur-xl">
+        <Card className="bg-gray-900 border-gray-800">
           <CardContent className="p-12 text-center">
-            <Play className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+            <Play className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">No videos yet</h3>
-            <p className="text-slate-400">Upload your first video to get started</p>
+            <p className="text-gray-500">Upload your first video to get started</p>
           </CardContent>
         </Card>
       ) : (
@@ -138,10 +138,10 @@ const VideoLibrary = () => {
           {videos.map((video) => (
             <Card
               key={video.id}
-              className="bg-white/5 border-white/10 backdrop-blur-xl hover:bg-white/10 transition-all duration-200 group overflow-hidden"
+              className="bg-gray-900 border-gray-800 hover:bg-gray-800 transition-all duration-200 group overflow-hidden"
               data-testid={`video-card-${video.id}`}
             >
-              <div className="relative aspect-video bg-black/50 overflow-hidden">
+              <div className="relative aspect-video bg-black overflow-hidden">
                 {video.thumbnail_path ? (
                   <img
                     src={`${API}/stream/thumbnail/${video.id}`}
@@ -150,7 +150,7 @@ const VideoLibrary = () => {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Play className="w-12 h-12 text-slate-600" />
+                    <Play className="w-12 h-12 text-gray-700" />
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end justify-center pb-4">
@@ -161,7 +161,7 @@ const VideoLibrary = () => {
                       setSelectedVideo(video);
                       setShowPlayer(true);
                     }}
-                    className="bg-indigo-500 hover:bg-indigo-600 text-white gap-2"
+                    className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
                     disabled={video.processing_status !== "ready"}
                   >
                     <Play className="w-4 h-4" />
@@ -173,9 +173,9 @@ const VideoLibrary = () => {
                     variant={video.processing_status === "ready" ? "success" : "secondary"}
                     className={`${
                       video.processing_status === "ready"
-                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                        ? "bg-green-600/20 text-green-400 border-green-500/30"
                         : video.processing_status === "processing"
-                        ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                        ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
                         : "bg-red-500/20 text-red-400 border-red-500/30"
                     }`}
                   >
@@ -186,9 +186,9 @@ const VideoLibrary = () => {
               <CardContent className="p-4">
                 <h3 className="text-lg font-semibold text-white mb-2 truncate">{video.title}</h3>
                 {video.description && (
-                  <p className="text-sm text-slate-400 mb-3 line-clamp-2">{video.description}</p>
+                  <p className="text-sm text-gray-500 mb-3 line-clamp-2">{video.description}</p>
                 )}
-                <div className="flex flex-wrap gap-3 text-xs text-slate-400 mb-4">
+                <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-4">
                   <div className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {formatDuration(video.duration)}
@@ -208,9 +208,8 @@ const VideoLibrary = () => {
                   <Button
                     data-testid={`edit-video-${video.id}`}
                     size="sm"
-                    variant="outline"
                     onClick={() => handleEdit(video)}
-                    className="flex-1 border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
+                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
                   >
                     <Edit2 className="w-3 h-3 mr-1" />
                     Edit
@@ -218,12 +217,11 @@ const VideoLibrary = () => {
                   <Button
                     data-testid={`embed-video-${video.id}`}
                     size="sm"
-                    variant="outline"
                     onClick={() => {
                       setSelectedVideo(video);
                       setShowEmbedSettings(true);
                     }}
-                    className="flex-1 border-white/10 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300"
+                    className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
                     disabled={video.processing_status !== "ready"}
                   >
                     <Code className="w-3 h-3 mr-1" />
@@ -232,9 +230,8 @@ const VideoLibrary = () => {
                   <Button
                     data-testid={`delete-video-${video.id}`}
                     size="sm"
-                    variant="outline"
                     onClick={() => handleDelete(video.id)}
-                    className="border-white/10 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    className="bg-red-600 hover:bg-red-700 text-white"
                   >
                     <Trash2 className="w-3 h-3" />
                   </Button>
@@ -247,11 +244,11 @@ const VideoLibrary = () => {
 
       {/* Video Player Dialog */}
       <Dialog open={showPlayer} onOpenChange={setShowPlayer}>
-        <DialogContent className="max-w-4xl bg-slate-950/95 border-white/10 text-white">
+        <DialogContent className="max-w-4xl bg-gray-900 border-gray-800 text-white">
           <DialogHeader>
             <DialogTitle className="text-white">{selectedVideo?.title}</DialogTitle>
             {selectedVideo?.description && (
-              <DialogDescription className="text-slate-400">{selectedVideo.description}</DialogDescription>
+              <DialogDescription className="text-gray-500">{selectedVideo.description}</DialogDescription>
             )}
           </DialogHeader>
           {selectedVideo && <VideoPlayer video={selectedVideo} />}
@@ -260,10 +257,10 @@ const VideoLibrary = () => {
 
       {/* Embed Code Dialog */}
       <Dialog open={showEmbedDialog} onOpenChange={setShowEmbedDialog}>
-        <DialogContent className="max-w-2xl bg-slate-950/95 border-white/10 text-white">
+        <DialogContent className="max-w-2xl bg-gray-900 border-gray-800 text-white">
           <DialogHeader>
             <DialogTitle className="text-white">Embed Code</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-gray-500">
               Copy this code to embed the video on your website
             </DialogDescription>
           </DialogHeader>
@@ -271,9 +268,9 @@ const VideoLibrary = () => {
             <Textarea
               value={embedCode}
               readOnly
-              className="font-mono text-sm bg-black/50 border-white/10 text-slate-300 min-h-[300px]"
+              className="font-mono text-sm bg-gray-800 border-gray-700 text-gray-300 min-h-[300px]"
             />
-            <Button onClick={copyEmbedCode} className="w-full bg-indigo-500 hover:bg-indigo-600">
+            <Button onClick={copyEmbedCode} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
               <Copy className="w-4 h-4 mr-2" />
               Copy Embed Code
             </Button>
@@ -283,39 +280,39 @@ const VideoLibrary = () => {
 
       {/* Edit Video Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-md bg-slate-950/95 border-white/10 text-white">
+        <DialogContent className="max-w-md bg-gray-900 border-gray-800 text-white">
           <DialogHeader>
             <DialogTitle className="text-white">Edit Video</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-title" className="text-slate-200">
+              <Label htmlFor="edit-title" className="text-gray-300">
                 Title
               </Label>
               <Input
                 id="edit-title"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="bg-white/5 border-white/10 text-white"
+                className="bg-gray-800 border-gray-700 text-white"
               />
             </div>
             <div>
-              <Label htmlFor="edit-description" className="text-slate-200">
+              <Label htmlFor="edit-description" className="text-gray-300">
                 Description
               </Label>
               <Textarea
                 id="edit-description"
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                className="bg-white/5 border-white/10 text-white"
+                className="bg-gray-800 border-gray-700 text-white"
                 rows={4}
               />
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => setShowEditDialog(false)} variant="outline" className="flex-1 border-white/10">
+              <Button onClick={() => setShowEditDialog(false)} className="flex-1 bg-gray-700 hover:bg-gray-600 text-white">
                 Cancel
               </Button>
-              <Button onClick={handleSaveEdit} className="flex-1 bg-indigo-500 hover:bg-indigo-600">
+              <Button onClick={handleSaveEdit} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
                 Save Changes
               </Button>
             </div>
