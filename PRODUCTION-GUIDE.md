@@ -200,10 +200,10 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
-    # Large file uploads for videos
-    client_max_body_size 2G;
-    client_body_buffer_size 128k;
-    client_body_timeout 300s;
+    # Large file uploads for videos (56GB max)
+    client_max_body_size 56G;
+    client_body_buffer_size 256k;
+    client_body_timeout 3600s;  # 1 hour for large uploads
 
     # Backend API
     location /api {
