@@ -107,10 +107,10 @@ const EmbedSettingsDialog = ({ video, open, onOpenChange, onGetEmbedCode }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-slate-950/95 border-white/10 text-white">
+      <DialogContent className="max-w-2xl bg-gray-900 border-gray-800 text-white">
         <DialogHeader>
           <DialogTitle className="text-white">Embed Settings</DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-gray-500">
             Configure embed options for {video?.title}
           </DialogDescription>
         </DialogHeader>
@@ -118,20 +118,20 @@ const EmbedSettingsDialog = ({ video, open, onOpenChange, onGetEmbedCode }) => {
         <div className="space-y-6">
           {/* Domain Restrictions */}
           <div className="space-y-3">
-            <Label className="text-slate-200">Allowed Domains</Label>
-            <p className="text-sm text-slate-400">Leave empty to allow all domains</p>
+            <Label className="text-gray-300">Allowed Domains</Label>
+            <p className="text-sm text-gray-500">Leave empty to allow all domains</p>
             <div className="flex gap-2">
               <Input
                 value={newDomain}
                 onChange={(e) => setNewDomain(e.target.value)}
                 placeholder="example.com"
-                className="bg-white/5 border-white/10 text-white"
+                className="bg-gray-800 border-gray-700 text-white"
                 onKeyPress={(e) => e.key === "Enter" && handleAddDomain()}
               />
               <Button
                 onClick={handleAddDomain}
                 size="sm"
-                className="bg-indigo-500 hover:bg-indigo-600"
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 <Plus className="w-4 h-4" />
               </Button>
@@ -142,12 +142,12 @@ const EmbedSettingsDialog = ({ video, open, onOpenChange, onGetEmbedCode }) => {
                   <Badge
                     key={domain}
                     variant="secondary"
-                    className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 gap-2"
+                    className="bg-blue-600/20 text-blue-300 border-blue-500/30 gap-2"
                   >
                     {domain}
                     <button
                       onClick={() => handleRemoveDomain(domain)}
-                      className="hover:text-indigo-100"
+                      className="hover:text-blue-100"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -159,7 +159,7 @@ const EmbedSettingsDialog = ({ video, open, onOpenChange, onGetEmbedCode }) => {
 
           {/* Player Color */}
           <div className="space-y-3">
-            <Label htmlFor="player-color" className="text-slate-200">
+            <Label htmlFor="player-color" className="text-gray-300">
               Player Color
             </Label>
             <div className="flex gap-3 items-center">
@@ -168,12 +168,12 @@ const EmbedSettingsDialog = ({ video, open, onOpenChange, onGetEmbedCode }) => {
                 type="color"
                 value={playerColor}
                 onChange={(e) => setPlayerColor(e.target.value)}
-                className="w-20 h-12 bg-white/5 border-white/10"
+                className="w-20 h-12 bg-gray-800 border-gray-700"
               />
               <Input
                 value={playerColor}
                 onChange={(e) => setPlayerColor(e.target.value)}
-                className="flex-1 bg-white/5 border-white/10 text-white"
+                className="flex-1 bg-gray-800 border-gray-700 text-white"
               />
             </div>
           </div>
@@ -182,24 +182,24 @@ const EmbedSettingsDialog = ({ video, open, onOpenChange, onGetEmbedCode }) => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <Label className="text-slate-200">Show Controls</Label>
-                <p className="text-sm text-slate-400">Display video player controls</p>
+                <Label className="text-gray-300">Show Controls</Label>
+                <p className="text-sm text-gray-500">Display video player controls</p>
               </div>
               <Switch checked={showControls} onCheckedChange={setShowControls} />
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <Label className="text-slate-200">Autoplay</Label>
-                <p className="text-sm text-slate-400">Start playing automatically</p>
+                <Label className="text-gray-300">Autoplay</Label>
+                <p className="text-sm text-gray-500">Start playing automatically</p>
               </div>
               <Switch checked={autoplay} onCheckedChange={setAutoplay} />
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <Label className="text-slate-200">Loop</Label>
-                <p className="text-sm text-slate-400">Replay video continuously</p>
+                <Label className="text-gray-300">Loop</Label>
+                <p className="text-sm text-gray-500">Replay video continuously</p>
               </div>
               <Switch checked={loop} onCheckedChange={setLoop} />
             </div>
@@ -209,14 +209,13 @@ const EmbedSettingsDialog = ({ video, open, onOpenChange, onGetEmbedCode }) => {
           <div className="flex gap-2 pt-4">
             <Button
               onClick={() => onOpenChange(false)}
-              variant="outline"
-              className="flex-1 border-white/10"
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
-              className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 gap-2"
+              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white gap-2"
               disabled={loading}
             >
               <Code className="w-4 h-4" />
