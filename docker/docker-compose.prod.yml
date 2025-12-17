@@ -1,0 +1,131 @@
+version: '3.8'
+
+# StreamHost Production Docker Compose Configuration
+# Version: 2025.12.17
+# For production deployment with Nginx reverse proxy
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: streamhost-mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: streamhost_db
+      # Uncomment for authentication in production:
+      # MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      # MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeme}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - streamhost-internal
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # Backend API (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: streamhost-backend
+    restart: always
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=streamhost_db
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://yourdomain.com}
+      - BACKEND_URL=${BACKEND_URL:-https://yourdomain.com}
+    volumes:
+      - video_storage:/app/video_storage
+      - ./logs/backend:/app/logs
+    expose:
+      - "8001"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - streamhost-internal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-https://yourdomain.com}
+    container_name: streamhost-frontend
+    restart: always
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+    networks:
+      - streamhost-internal
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: streamhost-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - streamhost-internal
+      - streamhost-external
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  video_storage:
+    driver: local
+
+networks:
+  streamhost-internal:
+    driver: bridge
+    internal: true
+  streamhost-external:
+    driver: bridge
