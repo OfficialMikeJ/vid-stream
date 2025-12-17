@@ -115,6 +115,22 @@ class EmbedSettingsCreate(BaseModel):
     loop: bool = False
     custom_css: Optional[str] = None
 
+class PlayerTheme(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    theme_name: str = "default"
+    primary_color: str = "#3b82f6"
+    secondary_color: str = "#1e40af"
+    text_color: str = "#ffffff"
+    background_color: str = "#000000"
+    controls_opacity: float = 0.9
+    border_radius: int = 8
+    show_logo: bool = False
+    logo_url: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
