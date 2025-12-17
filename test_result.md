@@ -107,51 +107,63 @@ user_problem_statement: Video hosting service (StreamHost, renamed from VidStrea
 backend:
   - task: "Admin user self-healing on startup"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented self-healing startup routine that ensures admin user exists on every backend startup. Added error handling and logging."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Backend logs show 'Admin user exists with id: 2161a531-9281-4802-8d9c-2ca754467fb5'. Self-healing routine working correctly on startup."
 
   - task: "Login API endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Login API tested via curl - works with admin/admin123 credentials"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Login API working perfectly. Successfully authenticated with admin/admin123, received token and must_change_password=true flag."
 
   - task: "Password change API endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Password change flow works via UI screenshot test"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Password change API working correctly. Successfully changed password from admin123 to NewSecurePass123! and subsequent login with new password works."
 
   - task: "Folder CRUD API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Folder API exists, needs testing"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: All folder CRUD operations working perfectly. Successfully tested create folder, get folders, and delete folder endpoints."
 
 frontend:
   - task: "Cancel button visibility fix"
