@@ -1,25 +1,25 @@
-# VidStream Connector - Quick Start Guide
+# StreamHost Connector - Quick Start Guide
 
-Get your VidStream videos on WordPress in 5 minutes!
+Get your StreamHost videos on WordPress in 5 minutes!
 
 ## Step 1: Install (2 minutes)
 
 ### Upload Plugin
-1. Download `vidstream-connector.zip`
+1. Download `streamhost-connector.zip`
 2. WordPress Admin → **Plugins** → **Add New**
 3. Click **Upload Plugin**
 4. Choose zip file → **Install Now** → **Activate**
 
 ### Verify
-✅ See "VidStream" in WordPress admin sidebar
+✅ See "StreamHost" in WordPress admin sidebar
 
 ## Step 2: Configure (1 minute)
 
 ### Enter Settings
-1. Go to **VidStream** → **Settings**
+1. Go to **StreamHost** → **Settings**
 2. Fill in:
    ```
-   API URL: https://your-vidstream-domain.com
+   API URL: https://your-streamhost-domain.com
    Username: admin
    Password: your-password
    ```
@@ -34,7 +34,7 @@ Get your VidStream videos on WordPress in 5 minutes!
 ## Step 3: Sync Videos (2 minutes)
 
 ### Import Videos
-1. Go to **VidStream** → **Sync Videos**
+1. Go to **StreamHost** → **Sync Videos**
 2. Click **Sync All Videos Now**
 3. Wait for progress bar to complete
 
@@ -71,6 +71,6 @@ Videos sync automatically based on your interval (hourly/daily).
 **Pro Tips:**
 
 💡 Enable auto-sync to keep videos updated automatically
-💡 Check **VidStream** → **Sync Log** to see sync history
+💡 Check **StreamHost** → **Sync Log** to see sync history
 💡 Use **Re-sync** button in video edit page to update individual videos
-💡 Videos must be in "ready" status in VidStream to sync
+💡 Videos must be in "ready" status in StreamHost to sync

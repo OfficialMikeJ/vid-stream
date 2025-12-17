@@ -1,11 +1,11 @@
-# VidStream Connector - WordPress Plugin
+# StreamHost Connector - WordPress Plugin
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-5.8%2B-blue)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-purple)
 ![License](https://img.shields.io/badge/license-GPL--2.0-green)
 
-Seamlessly integrate your VidStream video hosting platform with WordPress. Automatically sync videos, thumbnails, and metadata with full MAS Videos and StreamLab theme support.
+Seamlessly integrate your StreamHost video hosting platform with WordPress. Automatically sync videos, thumbnails, and metadata with full MAS Videos and StreamLab theme support.
 
 ## 🎯 Features
 
@@ -26,8 +26,8 @@ Seamlessly integrate your VidStream video hosting platform with WordPress. Autom
 - **Connection Testing** - Verify API connection before syncing
 - **Sync Progress** - Real-time progress bar during sync operations
 - **Detailed Logging** - Track every sync operation with timestamps
-- **Video Information Panel** - View VidStream data in video edit page
-- **Re-sync Individual Videos** - Update specific videos from VidStream
+- **Video Information Panel** - View StreamHost data in video edit page
+- **Re-sync Individual Videos** - Update specific videos from StreamHost
 
 ### Developer Friendly
 - **Clean Architecture** - Well-organized class structure
@@ -42,16 +42,16 @@ Seamlessly integrate your VidStream video hosting platform with WordPress. Autom
 | WordPress | 5.8+ |
 | PHP | 7.4+ |
 | MAS Videos Plugin | Latest |
-| VidStream Service | Running |
+| StreamHost Service | Running |
 
 ## 🚀 Installation
 
 ### Quick Install
 
 1. Download the latest release
-2. Upload to `/wp-content/plugins/vidstream-connector/`
+2. Upload to `/wp-content/plugins/streamhost-connector/`
 3. Activate via WordPress admin
-4. Configure settings in **VidStream > Settings**
+4. Configure settings in **StreamHost > Settings**
 
 ### Detailed Installation
 
@@ -61,8 +61,8 @@ See [INSTALLATION.md](INSTALLATION.md) for complete setup guide.
 
 ### Basic Setup
 
-1. Navigate to **VidStream > Settings**
-2. Enter your VidStream API URL (e.g., `https://your-domain.com`)
+1. Navigate to **StreamHost > Settings**
+2. Enter your StreamHost API URL (e.g., `https://your-domain.com`)
 3. Enter admin username and password
 4. Enable auto-sync (optional)
 5. Click **Save Settings**
@@ -71,11 +71,11 @@ See [INSTALLATION.md](INSTALLATION.md) for complete setup guide.
 
 1. Click **Test Connection** button
 2. Verify successful connection
-3. Check video count matches VidStream
+3. Check video count matches StreamHost
 
 ### First Sync
 
-1. Go to **VidStream > Sync Videos**
+1. Go to **StreamHost > Sync Videos**
 2. Click **Sync All Videos Now**
 3. Wait for completion
 4. Check synced videos in **Videos > All Videos**
@@ -93,18 +93,18 @@ When auto-sync is enabled:
 ### Manual Syncing
 
 **Sync All Videos:**
-1. Go to **VidStream > Sync Videos**
+1. Go to **StreamHost > Sync Videos**
 2. Click **Sync All Videos Now**
 3. View progress and results
 
 **Re-sync Single Video:**
 1. Edit any video post
-2. Find **VidStream Information** panel
-3. Click **Re-sync from VidStream**
+2. Find **StreamHost Information** panel
+3. Click **Re-sync from StreamHost**
 
 ### View Sync History
 
-Go to **VidStream > Sync Log** to see:
+Go to **StreamHost > Sync Log** to see:
 - Video ID
 - WordPress Post ID
 - Status (success/failed)
@@ -145,8 +145,8 @@ if (is_singular('video')) {
     // Get video URL
     $video_url = get_post_meta(get_the_ID(), '_video_url', true);
     
-    // Get VidStream ID
-    $vidstream_id = get_post_meta(get_the_ID(), '_vidstream_video_id', true);
+    // Get StreamHost ID
+    $streamhost_id = get_post_meta(get_the_ID(), '_streamhost_video_id', true);
     
     // Get duration
     $duration = get_post_meta(get_the_ID(), '_video_duration', true);
@@ -161,40 +161,40 @@ if (is_singular('video')) {
 
 ```php
 // Before video sync
-do_action('vidstream_before_sync', $video_id, $video_data);
+do_action('streamhost_before_sync', $video_id, $video_data);
 
 // After video sync
-do_action('vidstream_after_sync', $post_id, $video_data);
+do_action('streamhost_after_sync', $post_id, $video_data);
 
 // After thumbnail sync
-do_action('vidstream_after_thumbnail_sync', $post_id, $attachment_id);
+do_action('streamhost_after_thumbnail_sync', $post_id, $attachment_id);
 ```
 
 **Filters:**
 
 ```php
 // Modify video post data before creation
-apply_filters('vidstream_video_post_data', $post_data, $video_data);
+apply_filters('streamhost_video_post_data', $post_data, $video_data);
 
 // Modify video metadata
-apply_filters('vidstream_video_metadata', $metadata, $video_data);
+apply_filters('streamhost_video_metadata', $metadata, $video_data);
 
 // Modify sync interval
-apply_filters('vidstream_sync_interval', $interval);
+apply_filters('streamhost_sync_interval', $interval);
 ```
 
 ### Classes
 
-**VidStream_API**
+**StreamHost_API**
 ```php
-$api = new VidStream_API();
+$api = new StreamHost_API();
 $videos = $api->get_videos();
 $video = $api->get_video($video_id);
 ```
 
-**VidStream_Sync**
+**StreamHost_Sync**
 ```php
-$sync = new VidStream_Sync($api);
+$sync = new StreamHost_Sync($api);
 $result = $sync->sync_video($video_id);
 $result = $sync->sync_all_videos();
 ```
@@ -203,7 +203,7 @@ $result = $sync->sync_all_videos();
 
 ### Custom Tables
 
-**wp_vidstream_sync_log**
+**wp_streamhost_sync_log**
 - Tracks all sync operations
 - Stores video ID, post ID, status, message, timestamp
 - Used for sync history and debugging
@@ -212,9 +212,9 @@ $result = $sync->sync_all_videos();
 
 | Meta Key | Description |
 |----------|-------------|
-| `_vidstream_video_id` | VidStream video ID |
-| `_vidstream_synced` | Last sync timestamp |
-| `_vidstream_status` | Processing status |
+| `_streamhost_video_id` | StreamHost video ID |
+| `_streamhost_synced` | Last sync timestamp |
+| `_streamhost_status` | Processing status |
 | `_video_url` | HLS stream URL |
 | `_video_duration` | Video duration (seconds) |
 | `_video_width` | Video width (pixels) |
@@ -228,13 +228,13 @@ $result = $sync->sync_all_videos();
 ### File Structure
 
 ```
-vidstream-connector/
-├── vidstream-connector.php       # Main plugin file
+streamhost-connector/
+├── streamhost-connector.php       # Main plugin file
 ├── includes/
-│   ├── class-vidstream-api.php           # API handler
-│   ├── class-vidstream-sync.php          # Sync logic
-│   ├── class-vidstream-admin.php         # Admin interface
-│   └── class-vidstream-video-post-type.php # Post type handler
+│   ├── class-streamhost-api.php           # API handler
+│   ├── class-streamhost-sync.php          # Sync logic
+│   ├── class-streamhost-admin.php         # Admin interface
+│   └── class-streamhost-video-post-type.php # Post type handler
 ├── assets/
 │   ├── css/
 │   │   └── admin.css                     # Admin styles
@@ -285,7 +285,7 @@ vidstream-connector/
 
 **Solution:**
 - Check uploads directory is writable
-- Verify thumbnail exists in VidStream
+- Verify thumbnail exists in StreamHost
 - Check PHP memory limit
 - Re-sync the video
 
@@ -294,7 +294,7 @@ vidstream-connector/
 **Solution:**
 - Verify API URL format
 - Check credentials are correct
-- Ensure VidStream is accessible
+- Ensure StreamHost is accessible
 - Check for firewall blocking
 
 ### Debug Mode
@@ -363,12 +363,12 @@ Contributions are welcome! Please:
 ## 📧 Support
 
 **Plugin Issues:**
-- GitHub Issues: https://github.com/yourusername/vidstream-connector/issues
+- GitHub Issues: https://github.com/yourusername/streamhost-connector/issues
 - Email: support@your-domain.com
 
-**VidStream Service:**
-- VidStream Documentation
-- VidStream GitHub
+**StreamHost Service:**
+- StreamHost Documentation
+- StreamHost GitHub
 
 **WordPress/Theme:**
 - WordPress Support
@@ -397,7 +397,7 @@ GNU General Public License for more details.
 **Developed by:** Your Name
 **Contributors:** Community contributors
 **Built with:** WordPress, PHP, JavaScript
-**Integrates with:** VidStream, MAS Videos, StreamLab
+**Integrates with:** StreamHost, MAS Videos, StreamLab
 
 ---
 

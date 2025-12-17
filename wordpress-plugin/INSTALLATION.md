@@ -1,6 +1,6 @@
-# VidStream Connector - Installation Guide
+# StreamHost Connector - Installation Guide
 
-Complete guide to integrate VidStream with your StreamLab WordPress theme.
+Complete guide to integrate StreamHost with your StreamLab WordPress theme.
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@ Before installing, ensure you have:
 ✅ PHP 7.4 or higher  
 ✅ StreamLab theme installed and activated
 ✅ MAS Videos plugin installed and activated
-✅ VidStream hosting service running
+✅ StreamHost hosting service running
 
 ## Step 1: Install Required Plugins
 
@@ -31,35 +31,35 @@ The StreamLab theme requires the MAS Videos plugin for video functionality.
 4. Click **Upload Plugin** and select the StreamLab Core zip file
 5. Click **Install Now** and then **Activate**
 
-## Step 2: Install VidStream Connector
+## Step 2: Install StreamHost Connector
 
 ### Upload Plugin
 
-1. Download the `vidstream-connector.zip` file
+1. Download the `streamhost-connector.zip` file
 2. In WordPress admin, go to **Plugins > Add New**
 3. Click **Upload Plugin**
-4. Choose the `vidstream-connector.zip` file
+4. Choose the `streamhost-connector.zip` file
 5. Click **Install Now**
 6. Click **Activate Plugin**
 
 ### Verify Installation
 
 After activation, you should see:
-- **VidStream** menu item in WordPress admin sidebar
+- **StreamHost** menu item in WordPress admin sidebar
 - Green success message confirming activation
 
-## Step 3: Configure VidStream Connector
+## Step 3: Configure StreamHost Connector
 
 ### Access Settings
 
-1. In WordPress admin, go to **VidStream > Settings**
+1. In WordPress admin, go to **StreamHost > Settings**
 2. You'll see a configuration form
 
-### Enter Your VidStream Credentials
+### Enter Your StreamHost Credentials
 
-**VidStream API URL:**
+**StreamHost API URL:**
 ```
-https://your-vidstream-domain.com
+https://your-streamhost-domain.com
 ```
 ⚠️ **Important:** Enter the URL WITHOUT `/api` at the end
 
@@ -67,13 +67,13 @@ https://your-vidstream-domain.com
 ```
 admin
 ```
-(or your VidStream admin username)
+(or your StreamHost admin username)
 
 **Password:**
 ```
 your-password
 ```
-(your VidStream admin password)
+(your StreamHost admin password)
 
 **Auto Sync:**
 - ☑️ Check this to enable automatic video syncing
@@ -95,19 +95,19 @@ After saving settings:
 2. Click **Test Connection** button
 3. You should see:
    - ✅ **Connection successful**
-   - Number of videos found in your VidStream library
+   - Number of videos found in your StreamHost library
 
 **If connection fails:**
 - Verify your API URL is correct (no /api at end)
 - Check username and password
-- Ensure your VidStream service is running
-- Check that VidStream is accessible from your WordPress server
+- Ensure your StreamHost service is running
+- Check that StreamHost is accessible from your WordPress server
 
 ## Step 5: Sync Your Videos
 
 ### Manual Sync
 
-1. Go to **VidStream > Sync Videos**
+1. Go to **StreamHost > Sync Videos**
 2. Click **Sync All Videos Now** button
 3. Watch the progress bar as videos are imported
 4. You'll see a summary:
@@ -121,20 +121,20 @@ After saving settings:
 1. Go to **Videos > All Videos** in WordPress admin
 2. You'll see all synced videos with:
    - Thumbnails
-   - VidStream status
+   - StreamHost status
    - Duration
    - Title and description
 
 ### Video Information
 
 Click **Edit** on any video to see:
-- Video ID from VidStream
+- Video ID from StreamHost
 - Processing status
 - Resolution and aspect ratio
 - File size and format
 - HLS stream URL
 - Last sync time
-- **Re-sync** button to update from VidStream
+- **Re-sync** button to update from StreamHost
 
 ## Step 6: Display Videos on Frontend
 
@@ -165,14 +165,14 @@ Videos will play using:
 ### Enable Auto Sync
 
 If you haven't already:
-1. Go to **VidStream > Settings**
+1. Go to **StreamHost > Settings**
 2. Check **Auto Sync** checkbox
 3. Select sync interval
 4. Click **Save Settings**
 
 ### How Auto Sync Works
 
-- WordPress will check VidStream for new/updated videos
+- WordPress will check StreamHost for new/updated videos
 - Runs automatically based on your interval
 - Only syncs videos with status "ready"
 - Creates new posts for new videos
@@ -180,7 +180,7 @@ If you haven't already:
 
 ### Monitor Sync Activity
 
-Go to **VidStream > Sync Log** to see:
+Go to **StreamHost > Sync Log** to see:
 - All sync operations
 - Success/failure status
 - Error messages
@@ -207,7 +207,7 @@ The plugin integrates with MAS Videos, so you can use:
 
 ### Video Metadata
 
-Synced from VidStream:
+Synced from StreamHost:
 - ✅ Title
 - ✅ Description
 - ✅ Thumbnail
@@ -220,7 +220,7 @@ Synced from VidStream:
 
 ### Folder Support
 
-If you organize videos in folders on VidStream:
+If you organize videos in folders on StreamHost:
 - Plugin syncs folder information
 - Can be mapped to WordPress categories/tags (future feature)
 
@@ -233,16 +233,16 @@ If you organize videos in folders on VidStream:
 **Solutions:**
 1. Verify API URL format: `https://domain.com` (no /api)
 2. Check username and password are correct
-3. Ensure VidStream admin user is active
-4. Test VidStream login directly in browser
+3. Ensure StreamHost admin user is active
+4. Test StreamHost login directly in browser
 
 ### Videos Not Syncing
 
 **Problem:** Sync completes but no videos appear
 
 **Solutions:**
-1. Check **VidStream > Sync Log** for errors
-2. Verify videos are in "ready" status in VidStream
+1. Check **StreamHost > Sync Log** for errors
+2. Verify videos are in "ready" status in StreamHost
 3. Check WordPress user permissions
 4. Ensure MAS Videos plugin is active
 
@@ -252,7 +252,7 @@ If you organize videos in folders on VidStream:
 
 **Solutions:**
 1. Check WordPress uploads directory is writable
-2. Verify thumbnail exists in VidStream
+2. Verify thumbnail exists in StreamHost
 3. Check PHP memory limit (recommended: 256M)
 4. Try re-syncing specific video
 
@@ -264,7 +264,7 @@ If you organize videos in folders on VidStream:
 1. Increase PHP max execution time
 2. Sync smaller batches manually
 3. Use scheduled auto-sync instead of manual
-4. Check VidStream server response time
+4. Check StreamHost server response time
 
 ### Videos Won't Play
 
@@ -280,9 +280,9 @@ If you organize videos in folders on VidStream:
 
 ### Plugin Issues
 
-For VidStream Connector plugin issues:
-- Check **VidStream > Sync Log** for error details
-- GitHub: https://github.com/yourusername/vidstream-connector
+For StreamHost Connector plugin issues:
+- Check **StreamHost > Sync Log** for error details
+- GitHub: https://github.com/yourusername/streamhost-connector
 
 ### Theme Issues
 
@@ -290,10 +290,10 @@ For StreamLab theme issues:
 - Theme documentation included in theme package
 - Support: https://gentechtreedesign.com
 
-### VidStream Issues
+### StreamHost Issues
 
-For VidStream service issues:
-- Check VidStream backend logs
+For StreamHost service issues:
+- Check StreamHost backend logs
 - Verify FFmpeg is working
 - Ensure MongoDB is running
 
@@ -307,9 +307,9 @@ For VidStream service issues:
 
 ### Video Management
 
-- Edit videos in VidStream, not WordPress
+- Edit videos in StreamHost, not WordPress
 - Use Re-sync button to update WordPress after changes
-- Keep VidStream as single source of truth
+- Keep StreamHost as single source of truth
 
 ### Performance
 
@@ -321,7 +321,7 @@ For VidStream service issues:
 ### Backup
 
 - Backup WordPress database regularly
-- VidStream videos are stored on VidStream server
+- StreamHost videos are stored on StreamHost server
 - WordPress only stores metadata and references
 
 ## Next Steps
@@ -347,13 +347,13 @@ After successful installation:
 
 Enable auto-updates:
 1. Go to **Plugins**
-2. Find VidStream Connector
+2. Find StreamHost Connector
 3. Click **Enable auto-updates**
 
 ---
 
 **Congratulations!** 🎉
 
-Your VidStream video hosting service is now integrated with your StreamLab WordPress theme!
+Your StreamHost video hosting service is now integrated with your StreamLab WordPress theme!
 
-Upload videos to VidStream, and they'll automatically appear on your WordPress site.
+Upload videos to StreamHost, and they'll automatically appear on your WordPress site.
