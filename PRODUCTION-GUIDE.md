@@ -1,13 +1,13 @@
-# VidStream - Production Deployment Guide
+# StreamHost - Production Deployment Guide
 
-Complete guide to deploy VidStream in production with minimal files and maximum security.
+Complete guide to deploy StreamHost in production with minimal files and maximum security.
 
 ## 📦 What You Need
 
 ### Essential Files Only
 
 ```
-vidstream/
+streamhost/
 ├── backend/
 │   ├── server.py                    # FastAPI application (1 file)
 │   ├── requirements.txt             # Python dependencies list
@@ -49,8 +49,8 @@ sudo apt install -y nginx
 
 ```bash
 # Create project directory
-sudo mkdir -p /var/www/vidstream
-cd /var/www/vidstream
+sudo mkdir -p /var/www/streamhost
+cd /var/www/streamhost
 
 # Upload your files (via SCP, Git, or FTP)
 # Only upload: server.py, requirements.txt, src/, public/, package.json
@@ -62,7 +62,7 @@ mkdir -p backend frontend
 ### Step 3: Backend Setup
 
 ```bash
-cd /var/www/vidstream/backend
+cd /var/www/streamhost/backend
 
 # Create virtual environment
 python3.11 -m venv venv
@@ -74,7 +74,7 @@ pip install -r requirements.txt
 # Create .env file
 cat > .env << 'EOF'
 MONGO_URL="mongodb://localhost:27017"
-DB_NAME="vidstream_production"
+DB_NAME="streamhost_production"
 CORS_ORIGINS="https://your-domain.com"
 JWT_SECRET="change-this-to-random-secure-key-min-32-chars"
 BACKEND_URL="https://your-domain.com"
@@ -88,7 +88,7 @@ uvicorn server:app --host 0.0.0.0 --port 8001
 ### Step 4: Frontend Setup
 
 ```bash
-cd /var/www/vidstream/frontend
+cd /var/www/streamhost/frontend
 
 # Install dependencies
 yarn install
@@ -108,35 +108,35 @@ yarn start
 
 ### Step 5: Supervisor Configuration
 
-Create `/etc/supervisor/conf.d/vidstream.conf`:
+Create `/etc/supervisor/conf.d/streamhost.conf`:
 
 ```bash
-sudo nano /etc/supervisor/conf.d/vidstream.conf
+sudo nano /etc/supervisor/conf.d/streamhost.conf
 ```
 
 Paste this configuration:
 
 ```ini
-[program:vidstream-backend]
-command=/var/www/vidstream/backend/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001 --workers 4
-directory=/var/www/vidstream/backend
+[program:streamhost-backend]
+command=/var/www/streamhost/backend/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8001 --workers 4
+directory=/var/www/streamhost/backend
 autostart=true
 autorestart=true
 user=www-data
-environment=PATH="/var/www/vidstream/backend/venv/bin"
-stdout_logfile=/var/log/vidstream/backend.log
-stderr_logfile=/var/log/vidstream/backend-error.log
+environment=PATH="/var/www/streamhost/backend/venv/bin"
+stdout_logfile=/var/log/streamhost/backend.log
+stderr_logfile=/var/log/streamhost/backend-error.log
 redirect_stderr=true
 
-[program:vidstream-frontend]
+[program:streamhost-frontend]
 command=/usr/bin/yarn start
-directory=/var/www/vidstream/frontend
+directory=/var/www/streamhost/frontend
 autostart=true
 autorestart=true
 user=www-data
 environment=NODE_ENV="production",PATH="/usr/bin:/usr/local/bin"
-stdout_logfile=/var/log/vidstream/frontend.log
-stderr_logfile=/var/log/vidstream/frontend-error.log
+stdout_logfile=/var/log/streamhost/frontend.log
+stderr_logfile=/var/log/streamhost/frontend-error.log
 redirect_stderr=true
 ```
 
@@ -144,17 +144,17 @@ redirect_stderr=true
 
 ```bash
 # Create log directory
-sudo mkdir -p /var/log/vidstream
-sudo chown www-data:www-data /var/log/vidstream
+sudo mkdir -p /var/log/streamhost
+sudo chown www-data:www-data /var/log/streamhost
 
 # Set permissions
-sudo chown -R www-data:www-data /var/www/vidstream
+sudo chown -R www-data:www-data /var/www/streamhost
 
 # Reload and start
 sudo supervisorctl reread
 sudo supervisorctl update
-sudo supervisorctl start vidstream-backend
-sudo supervisorctl start vidstream-frontend
+sudo supervisorctl start streamhost-backend
+sudo supervisorctl start streamhost-frontend
 
 # Check status
 sudo supervisorctl status
@@ -162,16 +162,16 @@ sudo supervisorctl status
 
 ### Step 6: Nginx Configuration
 
-Create `/etc/nginx/sites-available/vidstream`:
+Create `/etc/nginx/sites-available/streamhost`:
 
 ```bash
-sudo nano /etc/nginx/sites-available/vidstream
+sudo nano /etc/nginx/sites-available/streamhost
 ```
 
 Paste this configuration:
 
 ```nginx
-# VidStream Production Configuration
+# StreamHost Production Configuration
 upstream backend {
     server 127.0.0.1:8001;
 }
@@ -248,7 +248,7 @@ server {
 
 ```bash
 # Enable site
-sudo ln -s /etc/nginx/sites-available/vidstream /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/streamhost /etc/nginx/sites-enabled/
 
 # Test configuration
 sudo nginx -t
@@ -278,8 +278,8 @@ sudo certbot renew --dry-run
 sudo supervisorctl status
 
 # Check logs
-sudo tail -f /var/log/vidstream/backend.log
-sudo tail -f /var/log/vidstream/frontend.log
+sudo tail -f /var/log/streamhost/backend.log
+sudo tail -f /var/log/streamhost/frontend.log
 
 # Check Nginx
 sudo systemctl status nginx
@@ -316,18 +316,18 @@ sudo systemctl status mongodb
 ### File Permissions
 ```bash
 # Backend
-sudo chown -R www-data:www-data /var/www/vidstream/backend
-sudo chmod -R 750 /var/www/vidstream/backend
-sudo chmod 640 /var/www/vidstream/backend/.env
+sudo chown -R www-data:www-data /var/www/streamhost/backend
+sudo chmod -R 750 /var/www/streamhost/backend
+sudo chmod 640 /var/www/streamhost/backend/.env
 
 # Frontend
-sudo chown -R www-data:www-data /var/www/vidstream/frontend
-sudo chmod -R 750 /var/www/vidstream/frontend
+sudo chown -R www-data:www-data /var/www/streamhost/frontend
+sudo chmod -R 750 /var/www/streamhost/frontend
 
 # Video storage
-sudo mkdir -p /var/www/vidstream/backend/video_storage
-sudo chown -R www-data:www-data /var/www/vidstream/backend/video_storage
-sudo chmod -R 770 /var/www/vidstream/backend/video_storage
+sudo mkdir -p /var/www/streamhost/backend/video_storage
+sudo chown -R www-data:www-data /var/www/streamhost/backend/video_storage
+sudo chmod -R 770 /var/www/streamhost/backend/video_storage
 ```
 
 ### MongoDB Security
@@ -343,14 +343,14 @@ security:
 mongosh
 use admin
 db.createUser({
-  user: "vidstream_admin",
+  user: "streamhost_admin",
   pwd: "strong-password-here",
-  roles: [{role: "readWrite", db: "vidstream_production"}]
+  roles: [{role: "readWrite", db: "streamhost_production"}]
 })
 exit
 
 # Update .env with MongoDB auth
-MONGO_URL="mongodb://vidstream_admin:password@localhost:27017/vidstream_production"
+MONGO_URL="mongodb://streamhost_admin:password@localhost:27017/streamhost_production"
 ```
 
 ---
@@ -360,10 +360,10 @@ MONGO_URL="mongodb://vidstream_admin:password@localhost:27017/vidstream_producti
 ### View Logs
 ```bash
 # Real-time backend logs
-sudo tail -f /var/log/vidstream/backend.log
+sudo tail -f /var/log/streamhost/backend.log
 
 # Real-time frontend logs
-sudo tail -f /var/log/vidstream/frontend.log
+sudo tail -f /var/log/streamhost/frontend.log
 
 # Nginx access logs
 sudo tail -f /var/log/nginx/access.log
@@ -375,10 +375,10 @@ sudo tail -f /var/log/nginx/error.log
 ### Restart Services
 ```bash
 # Restart backend only
-sudo supervisorctl restart vidstream-backend
+sudo supervisorctl restart streamhost-backend
 
 # Restart frontend only
-sudo supervisorctl restart vidstream-frontend
+sudo supervisorctl restart streamhost-frontend
 
 # Restart all
 sudo supervisorctl restart all
@@ -390,21 +390,21 @@ sudo systemctl restart nginx
 ### Database Backup
 ```bash
 # Create backup script
-sudo nano /usr/local/bin/backup-vidstream.sh
+sudo nano /usr/local/bin/backup-streamhost.sh
 ```
 
 Add:
 ```bash
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/var/backups/vidstream"
+BACKUP_DIR="/var/backups/streamhost"
 mkdir -p $BACKUP_DIR
 
 # Backup MongoDB
-mongodump --db=vidstream_production --out=$BACKUP_DIR/mongo_$DATE
+mongodump --db=streamhost_production --out=$BACKUP_DIR/mongo_$DATE
 
 # Backup video storage (optional - can be large)
-# tar -czf $BACKUP_DIR/videos_$DATE.tar.gz /var/www/vidstream/backend/video_storage
+# tar -czf $BACKUP_DIR/videos_$DATE.tar.gz /var/www/streamhost/backend/video_storage
 
 # Keep only last 7 days
 find $BACKUP_DIR -mtime +7 -delete
@@ -414,11 +414,11 @@ echo "Backup completed: $DATE"
 
 Make executable and schedule:
 ```bash
-sudo chmod +x /usr/local/bin/backup-vidstream.sh
+sudo chmod +x /usr/local/bin/backup-streamhost.sh
 sudo crontab -e
 
 # Add daily backup at 2 AM
-0 2 * * * /usr/local/bin/backup-vidstream.sh >> /var/log/vidstream-backup.log 2>&1
+0 2 * * * /usr/local/bin/backup-streamhost.sh >> /var/log/streamhost-backup.log 2>&1
 ```
 
 ### Update Application
@@ -427,7 +427,7 @@ sudo crontab -e
 sudo supervisorctl stop all
 
 # Update code
-cd /var/www/vidstream
+cd /var/www/streamhost
 # Upload new server.py or frontend files
 
 # Update backend dependencies if needed
@@ -453,11 +453,11 @@ sudo supervisorctl status
 ### Backend Optimization
 ```bash
 # Increase worker processes in supervisor config
-# Edit /etc/supervisor/conf.d/vidstream.conf
+# Edit /etc/supervisor/conf.d/streamhost.conf
 command=...uvicorn server:app --host 0.0.0.0 --port 8001 --workers 4 --worker-class uvicorn.workers.UvicornWorker
 
 # Restart
-sudo supervisorctl restart vidstream-backend
+sudo supervisorctl restart streamhost-backend
 ```
 
 ### Nginx Caching
@@ -479,7 +479,7 @@ location ~* \.(ts|m3u8)$ {
 ### MongoDB Optimization
 ```bash
 # Enable MongoDB indexes
-mongosh vidstream_production
+mongosh streamhost_production
 
 # Create indexes
 db.videos.createIndex({processing_status: 1})
@@ -494,16 +494,16 @@ db.folders.createIndex({parent_id: 1})
 ### Services Won't Start
 ```bash
 # Check supervisor logs
-sudo supervisorctl tail -f vidstream-backend stderr
-sudo supervisorctl tail -f vidstream-frontend stderr
+sudo supervisorctl tail -f streamhost-backend stderr
+sudo supervisorctl tail -f streamhost-frontend stderr
 
 # Check permissions
-ls -la /var/www/vidstream/backend/
-ls -la /var/www/vidstream/frontend/
+ls -la /var/www/streamhost/backend/
+ls -la /var/www/streamhost/frontend/
 
 # Check environment
 sudo -u www-data bash
-cd /var/www/vidstream/backend
+cd /var/www/streamhost/backend
 source venv/bin/activate
 python server.py
 ```
@@ -514,13 +514,13 @@ python server.py
 df -h
 
 # Check video_storage permissions
-ls -la /var/www/vidstream/backend/video_storage/
+ls -la /var/www/streamhost/backend/video_storage/
 
 # Check Nginx upload limit
 sudo nginx -T | grep client_max_body_size
 
 # Check backend logs for errors
-sudo tail -f /var/log/vidstream/backend.log
+sudo tail -f /var/log/streamhost/backend.log
 ```
 
 ### FFmpeg Errors
@@ -533,7 +533,7 @@ ffmpeg -version
 sudo -u www-data ffmpeg -i input.mp4 -t 1 test.mp4
 
 # Check video_storage write permissions
-sudo -u www-data touch /var/www/vidstream/backend/video_storage/test.txt
+sudo -u www-data touch /var/www/streamhost/backend/video_storage/test.txt
 ```
 
 ---
@@ -566,7 +566,7 @@ sudo iftop
 
 ## ✅ Production Deployment Complete
 
-Your VidStream platform is now:
+Your StreamHost platform is now:
 - ✅ Running with Supervisor
 - ✅ Secured with SSL
 - ✅ Protected by Nginx
@@ -583,7 +583,7 @@ Your VidStream platform is now:
 - Backend: `server.py` + `requirements.txt` + `.env`
 - Frontend: `src/` + `public/` + `package.json` + `.env`
 - Config: Supervisor + Nginx
-- Logs: `/var/log/vidstream/`
+- Logs: `/var/log/streamhost/`
 
 **Next Steps:**
 1. Change default password
