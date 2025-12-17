@@ -164,17 +164,17 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 async def initialize_admin_user():
     """Ensure admin user exists on every startup - self-healing routine"""
     try:
-        existing_user = await db.users.find_one({"username": "admin"})
+        existing_user = await db.users.find_one({"username": "StreamHost"})
         if not existing_user:
             admin_user = User(
-                username="admin",
-                password_hash=hash_password("admin123"),
+                username="StreamHost",
+                password_hash=hash_password("password1234!@#"),
                 must_change_password=True
             )
             doc = admin_user.model_dump()
             doc['created_at'] = doc['created_at'].isoformat()
             await db.users.insert_one(doc)
-            logger.info("Default admin user created: admin/admin123")
+            logger.info("Default admin user created: StreamHost")
         else:
             logger.info(f"Admin user exists with id: {existing_user.get('id', 'unknown')}")
     except Exception as e:
@@ -182,8 +182,8 @@ async def initialize_admin_user():
         # Create admin user if any error occurred during check
         try:
             admin_user = User(
-                username="admin",
-                password_hash=hash_password("admin123"),
+                username="StreamHost",
+                password_hash=hash_password("password1234!@#"),
                 must_change_password=True
             )
             doc = admin_user.model_dump()
