@@ -162,18 +162,34 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Invalid token")
 
 async def initialize_admin_user():
-    """Create default admin user if not exists"""
-    existing_user = await db.users.find_one({"username": "admin"})
-    if not existing_user:
-        admin_user = User(
-            username="admin",
-            password_hash=hash_password("admin123"),
-            must_change_password=True
-        )
-        doc = admin_user.model_dump()
-        doc['created_at'] = doc['created_at'].isoformat()
-        await db.users.insert_one(doc)
-        logger.info("Default admin user created: admin/admin123")
+    """Ensure admin user exists on every startup - self-healing routine"""
+    try:
+        existing_user = await db.users.find_one({"username": "admin"})
+        if not existing_user:
+            admin_user = User(
+                username="admin",
+                password_hash=hash_password("admin123"),
+                must_change_password=True
+            )
+            doc = admin_user.model_dump()
+            doc['created_at'] = doc['created_at'].isoformat()
+            await db.users.insert_one(doc)
+            logger.info("Default admin user created: admin/admin123")
+        else:
+            logger.info(f"Admin user exists with id: {existing_user.get('id', 'unknown')}")
+    except Exception as e:
+        logger.error(f"Error initializing admin user: {str(e)}")
+        # Create admin user if any error occurred during check
+        try:
+            admin_user = User(
+                username="admin",
+                password_hash=hash_password("admin123"),
+                must_change_password=True
+            )
+            doc = admin_user.model_dump()
+            doc['created_at'] = doc['created_at'].isoformat()
+            await db.users.insert_one(doc)
+            logger.info("Admin user recreated after error")
 
 # Auth endpoints
 @api_router.post("/auth/login")

@@ -116,7 +116,7 @@ const FolderManagement = () => {
                   type="button"
                   variant="outline"
                   onClick={() => setShowDialog(false)}
-                  className="flex-1 border-white/10"
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 border-gray-600 text-white"
                 >
                   Cancel
                 </Button>
