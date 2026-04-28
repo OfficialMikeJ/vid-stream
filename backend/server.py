@@ -33,6 +33,7 @@ VIDEO_STORAGE_PATH.mkdir(exist_ok=True)
 (VIDEO_STORAGE_PATH / "originals").mkdir(exist_ok=True)
 (VIDEO_STORAGE_PATH / "thumbnails").mkdir(exist_ok=True)
 (VIDEO_STORAGE_PATH / "hls").mkdir(exist_ok=True)
+(VIDEO_STORAGE_PATH / "temp").mkdir(exist_ok=True)
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -308,6 +309,123 @@ async def upload_video(
     asyncio.create_task(process_video(video_id))
     
     return {"video_id": video_id, "message": "Video uploaded and processing started"}
+
+# ---------- Chunked Upload Endpoints ----------
+
+@api_router.post("/upload/init")
+async def init_chunked_upload(
+    filename: str = Form(...),
+    title: str = Form(...),
+    total_size: int = Form(...),
+    description: Optional[str] = Form(None),
+    folder_id: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user)
+):
+    """Initialize a chunked upload session. Returns upload_id and video_id."""
+    upload_id = str(uuid.uuid4())
+    video_id = str(uuid.uuid4())
+
+    temp_dir = VIDEO_STORAGE_PATH / "temp" / upload_id
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    await db.uploads.insert_one({
+        "upload_id": upload_id,
+        "video_id": video_id,
+        "filename": filename,
+        "title": title,
+        "description": description,
+        "folder_id": folder_id,
+        "total_size": total_size,
+        "chunks_received": [],
+        "status": "in_progress",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    return {"upload_id": upload_id, "video_id": video_id}
+
+
+@api_router.post("/upload/chunk")
+async def upload_chunk(
+    upload_id: str = Form(...),
+    chunk_index: int = Form(...),
+    total_chunks: int = Form(...),
+    chunk: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Receive a single file chunk. Reassembles and processes the video once all chunks arrive."""
+    upload_meta = await db.uploads.find_one({"upload_id": upload_id}, {"_id": 0})
+    if not upload_meta:
+        raise HTTPException(status_code=404, detail="Upload session not found")
+    if upload_meta["status"] != "in_progress":
+        raise HTTPException(status_code=400, detail="Upload session is not active")
+
+    temp_dir = VIDEO_STORAGE_PATH / "temp" / upload_id
+    chunk_path = temp_dir / f"chunk_{chunk_index:06d}"
+
+    content = await chunk.read()
+    with open(chunk_path, "wb") as f:
+        f.write(content)
+
+    await db.uploads.update_one(
+        {"upload_id": upload_id},
+        {"$addToSet": {"chunks_received": chunk_index}}
+    )
+
+    # Refresh to get latest count
+    upload_meta = await db.uploads.find_one({"upload_id": upload_id}, {"_id": 0})
+    chunks_received = upload_meta.get("chunks_received", [])
+
+    if len(chunks_received) >= total_chunks:
+        # All chunks received — reassemble file
+        video_id = upload_meta["video_id"]
+        filename = upload_meta["filename"]
+        file_extension = Path(filename).suffix
+        original_path = VIDEO_STORAGE_PATH / "originals" / f"{video_id}{file_extension}"
+
+        with open(original_path, "wb") as output:
+            for i in range(total_chunks):
+                chunk_file = temp_dir / f"chunk_{i:06d}"
+                with open(chunk_file, "rb") as cf:
+                    shutil.copyfileobj(cf, output)
+
+        shutil.rmtree(temp_dir)
+
+        file_size = original_path.stat().st_size
+
+        video = VideoMetadata(
+            id=video_id,
+            title=upload_meta["title"],
+            description=upload_meta.get("description"),
+            folder_id=upload_meta.get("folder_id"),
+            original_filename=filename,
+            file_path=str(original_path),
+            file_size=file_size,
+            processing_status="pending"
+        )
+        doc = video.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        await db.videos.insert_one(doc)
+
+        await db.uploads.update_one(
+            {"upload_id": upload_id},
+            {"$set": {"status": "complete"}}
+        )
+
+        asyncio.create_task(process_video(video_id))
+
+        return {
+            "status": "complete",
+            "video_id": video_id,
+            "message": "Upload complete, processing started"
+        }
+
+    return {
+        "status": "in_progress",
+        "chunk_index": chunk_index,
+        "chunks_received": len(chunks_received),
+        "total_chunks": total_chunks
+    }
+
 
 async def process_video(video_id: str):
     """Process video: extract metadata, generate thumbnail, create HLS stream"""

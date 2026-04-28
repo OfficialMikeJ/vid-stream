@@ -732,9 +732,11 @@ class StreamHostApp:
         # Progress
         self.upload_progress = ttk.Progressbar(
             form_frame,
-            mode="indeterminate",
+            mode="determinate",
+            maximum=100,
             bootstyle="success-striped"
         )
+        self.upload_progress_label = ttk.Label(form_frame, text="", font=("Helvetica", 10), bootstyle="info")
         self.upload_status = ttk.Label(form_frame, text="", font=("Helvetica", 10))
     
     def load_folders_for_upload(self):
@@ -776,26 +778,26 @@ class StreamHostApp:
                 self.title_entry.insert(0, title)
     
     def upload_video(self):
-        """Upload video to server"""
+        """Upload video to server using chunked upload"""
         file_path = self.file_path_var.get()
         title = self.title_entry.get().strip()
         description = self.description_text.get("1.0", tk.END).strip()
-        
+
         if file_path == "No file selected":
             messagebox.showerror("Error", "Please select a video file")
             return
-        
+
         if not title:
             messagebox.showerror("Error", "Please enter a title")
             return
-        
+
         # Check file size (56GB max)
         file_size = os.path.getsize(file_path)
         max_size = 56 * 1024 * 1024 * 1024
         if file_size > max_size:
             messagebox.showerror("Error", "File too large. Maximum size is 56GB.")
             return
-        
+
         # Get folder ID
         folder_id = None
         folder_selection = self.folder_var.get()
@@ -804,70 +806,117 @@ class StreamHostApp:
                 if f["name"] == folder_selection:
                     folder_id = f["id"]
                     break
-        
-        # Show progress
+
+        # Show progress UI
         self.upload_btn.config(state="disabled")
-        self.upload_progress.pack(fill="x", pady=10)
-        self.upload_progress.start()
-        self.upload_status.config(text="Uploading... This may take a while for large files.")
+        self.upload_progress["value"] = 0
+        self.upload_progress.pack(fill="x", pady=5)
+        self.upload_progress_label.config(text="Initializing upload...")
+        self.upload_progress_label.pack()
+        self.upload_status.config(text="")
         self.upload_status.pack()
-        
-        # Upload in thread
+
+        # Upload in background thread
         thread = threading.Thread(
             target=self._upload_thread,
-            args=(file_path, title, description, folder_id)
+            args=(file_path, title, description, folder_id, file_size)
         )
         thread.daemon = True
         thread.start()
-    
-    def _upload_thread(self, file_path, title, description, folder_id):
-        """Upload thread"""
+
+    def _upload_thread(self, file_path, title, description, folder_id, file_size):
+        """Chunked upload thread — splits file into 5 MB chunks"""
+        CHUNK_SIZE = 5 * 1024 * 1024  # 5 MB
+        filename = Path(file_path).name
+        total_chunks = max(1, -(-file_size // CHUNK_SIZE))  # ceiling division
+        total_mb = file_size / (1024 * 1024)
+
         try:
+            # --- Step 1: Initialize upload ---
+            self.root.after(0, lambda: self.upload_progress_label.config(text="Initializing upload..."))
+
+            init_data = {
+                "filename": filename,
+                "title": title,
+                "total_size": file_size,
+            }
+            if description:
+                init_data["description"] = description
+            if folder_id:
+                init_data["folder_id"] = folder_id
+
+            resp = requests.post(
+                f"{self.api_url}/api/upload/init",
+                headers={"Authorization": f"Bearer {self.token}"},
+                data=init_data,
+                timeout=30
+            )
+            resp.raise_for_status()
+            upload_id = resp.json()["upload_id"]
+
+            # --- Step 2: Upload chunks ---
             with open(file_path, "rb") as f:
-                files = {"file": f}
-                data = {"title": title}
-                if description:
-                    data["description"] = description
-                if folder_id:
-                    data["folder_id"] = folder_id
-                
-                response = requests.post(
-                    f"{self.api_url}/api/videos/upload",
-                    headers={"Authorization": f"Bearer {self.token}"},
-                    files=files,
-                    data=data,
-                    timeout=3600  # 1 hour for large files
-                )
-            
-            self.root.after(0, self._upload_complete, response)
+                for i in range(total_chunks):
+                    chunk_data = f.read(CHUNK_SIZE)
+                    if not chunk_data:
+                        break
+
+                    files = {"chunk": (f"chunk_{i}", chunk_data, "application/octet-stream")}
+                    data = {
+                        "upload_id": upload_id,
+                        "chunk_index": i,
+                        "total_chunks": total_chunks,
+                    }
+
+                    chunk_resp = requests.post(
+                        f"{self.api_url}/api/upload/chunk",
+                        headers={"Authorization": f"Bearer {self.token}"},
+                        data=data,
+                        files=files,
+                        timeout=120
+                    )
+                    chunk_resp.raise_for_status()
+
+                    progress = int(((i + 1) / total_chunks) * 100)
+                    uploaded_mb = min((i + 1) * CHUNK_SIZE / (1024 * 1024), total_mb)
+                    label_text = f"Uploading: {uploaded_mb:.1f} MB / {total_mb:.1f} MB  ({i+1}/{total_chunks} chunks)"
+
+                    # Update UI on main thread
+                    self.root.after(0, lambda p=progress, t=label_text: self._update_progress(p, t))
+
+                    result = chunk_resp.json()
+                    if result.get("status") == "complete":
+                        break
+
+            self.root.after(0, self._upload_complete)
+
         except Exception as e:
-            self.root.after(0, self._upload_error, str(e))
-    
-    def _upload_complete(self, response):
+            self.root.after(0, lambda err=str(e): self._upload_error(err))
+
+    def _update_progress(self, value, label_text):
+        """Update progress bar and label from main thread"""
+        self.upload_progress["value"] = value
+        self.upload_progress_label.config(text=label_text)
+
+    def _upload_complete(self):
         """Handle upload completion"""
-        self.upload_progress.stop()
-        self.upload_progress.pack_forget()
+        self.upload_progress["value"] = 100
+        self.upload_progress_label.config(text="Upload complete!")
         self.upload_btn.config(state="normal")
-        
-        if response.status_code == 200:
-            self.upload_status.config(text="✅ Upload successful! Processing started.", bootstyle="success")
-            messagebox.showinfo("Success", "Video uploaded successfully! Processing will begin shortly.")
-            
-            # Clear form
-            self.file_path_var.set("No file selected")
-            self.title_entry.delete(0, tk.END)
-            self.description_text.delete("1.0", tk.END)
-        else:
-            try:
-                error_msg = response.json().get("detail", "Upload failed")
-            except:
-                error_msg = "Upload failed"
-            self.upload_status.config(text=f"❌ {error_msg}", bootstyle="danger")
-    
+        self.upload_status.config(text="✅ Upload successful! Processing started.", bootstyle="success")
+        messagebox.showinfo("Success", "Video uploaded successfully! Processing will begin shortly.")
+
+        # Clear form
+        self.file_path_var.set("No file selected")
+        self.title_entry.delete(0, tk.END)
+        self.description_text.delete("1.0", tk.END)
+        self.upload_progress.pack_forget()
+        self.upload_progress_label.pack_forget()
+
     def _upload_error(self, error_msg):
         """Handle upload error"""
-        self.upload_progress.stop()
         self.upload_progress.pack_forget()
+        self.upload_progress_label.pack_forget()
         self.upload_btn.config(state="normal")
         self.upload_status.config(text=f"❌ Error: {error_msg}", bootstyle="danger")
     

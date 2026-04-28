@@ -74,48 +74,47 @@ const UploadVideo = () => {
 
   const uploadChunked = async (file, title, description, folderId) => {
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-    let uploadedChunks = 0;
+    const totalMB = (file.size / 1024 / 1024).toFixed(1);
 
-    // For smaller files (< 50MB), use regular upload
-    if (file.size < 50 * 1024 * 1024) {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("title", title);
-      if (description) formData.append("description", description);
-      if (folderId && folderId !== "none") formData.append("folder_id", folderId);
+    // Step 1: Initialize upload session
+    setUploadPhase("Initializing upload...");
+    const initForm = new FormData();
+    initForm.append("filename", file.name);
+    initForm.append("title", title);
+    initForm.append("total_size", file.size);
+    if (description) initForm.append("description", description);
+    if (folderId && folderId !== "none") initForm.append("folder_id", folderId);
 
-      await axios.post(`${API}/videos/upload`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percentCompleted);
-        },
-      });
-      return;
-    }
-
-    // For larger files, show chunked progress simulation
-    // (actual chunking would require backend support)
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("title", title);
-    if (description) formData.append("description", description);
-    if (folderId && folderId !== "none") formData.append("folder_id", folderId);
-
-    await axios.post(`${API}/videos/upload`, formData, {
+    const initResp = await axios.post(`${API}/upload/init`, initForm, {
       headers: { "Content-Type": "multipart/form-data" },
-      onUploadProgress: (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        setUploadProgress(percentCompleted);
-        
-        // Update phase message for large files
-        if (percentCompleted < 100) {
-          const uploaded = (progressEvent.loaded / 1024 / 1024).toFixed(1);
-          const total = (progressEvent.total / 1024 / 1024).toFixed(1);
-          setUploadPhase(`Uploading: ${uploaded}MB / ${total}MB`);
-        }
-      },
     });
+    const { upload_id } = initResp.data;
+
+    // Step 2: Upload chunks sequentially
+    for (let i = 0; i < totalChunks; i++) {
+      if (abortControllerRef.current?.signal?.aborted) {
+        throw new Error("Upload cancelled");
+      }
+
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunkBlob = file.slice(start, end);
+
+      const chunkForm = new FormData();
+      chunkForm.append("upload_id", upload_id);
+      chunkForm.append("chunk_index", i);
+      chunkForm.append("total_chunks", totalChunks);
+      chunkForm.append("chunk", chunkBlob, `chunk_${i}`);
+
+      await axios.post(`${API}/upload/chunk`, chunkForm, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const progress = Math.round(((i + 1) / totalChunks) * 100);
+      const uploadedMB = Math.min(((i + 1) * CHUNK_SIZE) / 1024 / 1024, file.size / 1024 / 1024).toFixed(1);
+      setUploadProgress(progress);
+      setUploadPhase(`Uploading: ${uploadedMB}MB / ${totalMB}MB (chunk ${i + 1}/${totalChunks})`);
+    }
   };
 
   const handleUpload = async (e) => {
