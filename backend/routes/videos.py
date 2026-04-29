@@ -213,6 +213,14 @@ async def stream_hls_playlist(video_id: str, request: Request):
     path = Path(video["hls_path"])
     if not path.exists():
         raise HTTPException(status_code=404, detail="Playlist not found")
+
+    # Record analytics view (de-duped per visitor for 30 minutes)
+    try:
+        from routes.analytics import record_view
+        await record_view(video_id, request)
+    except Exception:
+        pass  # Never let analytics break streaming
+
     return FileResponse(path, media_type="application/vnd.apple.mpegurl")
 
 
