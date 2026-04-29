@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Play, Trash2, Edit2, Copy, Clock, HardDrive, Eye, Code, Search, X } from "lucide-react";
+import { Play, Trash2, Edit2, Copy, Clock, HardDrive, Eye, Code, Search, X, Share2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import VideoPlayer from "./VideoPlayer";
 import EmbedSettingsDialog from "./EmbedSettingsDialog";
 import VideoComments from "./VideoComments";
 import VideoCaptions from "./VideoCaptions";
+import ShareLinksDialog from "./ShareLinksDialog";
 
 const VideoLibrary = ({ userRole = "admin" }) => {
   const isAdmin = userRole === "admin";
@@ -35,6 +36,7 @@ const VideoLibrary = ({ userRole = "admin" }) => {
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [showEmbedSettings, setShowEmbedSettings] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   // Search + filter state
   const [searchTerm, setSearchTerm] = useState("");
@@ -316,6 +318,21 @@ const VideoLibrary = ({ userRole = "admin" }) => {
                   </Button>
                   {isAdmin && (
                     <Button
+                      data-testid={`share-video-${video.id}`}
+                      size="sm"
+                      onClick={() => {
+                        setSelectedVideo(video);
+                        setShowShareDialog(true);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      disabled={video.processing_status !== "ready" && video.processing_status !== "external"}
+                      title="Share link"
+                    >
+                      <Share2 className="w-3 h-3" />
+                    </Button>
+                  )}
+                  {isAdmin && (
+                    <Button
                       data-testid={`delete-video-${video.id}`}
                       size="sm"
                       onClick={() => handleDelete(video.id)}
@@ -429,6 +446,15 @@ const VideoLibrary = ({ userRole = "admin" }) => {
             setShowEmbedSettings(false);
             handleGetEmbedCode(selectedVideo);
           }}
+        />
+      )}
+
+      {/* Share Links Dialog */}
+      {selectedVideo && (
+        <ShareLinksDialog
+          video={selectedVideo}
+          open={showShareDialog}
+          onOpenChange={setShowShareDialog}
         />
       )}
     </div>

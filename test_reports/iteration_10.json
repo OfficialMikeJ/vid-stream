@@ -1,0 +1,44 @@
+{
+  "summary": "Feature #5 — Video Sharing Links: full backend + frontend coverage. 19/19 pytest tests green. All admin UI flows (create unprotected, create password-protected, password badge, copy/revoke, empty state) and all public /watch/{token} flows (unprotected playback, password prompt, wrong/correct password, nonexistent) verified end-to-end against the public preview URL. Public endpoint correctly works without an Authorization header.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "VideoLibrary.jsx — share button row", "issue": "When the admin clicks the Share button (testid=share-video-{id}) on a card, the EmbedSettings dialog (testid=embed-video-{id} target) also briefly opens behind the ShareLinksDialog. The two dialogs were observed stacked in the screenshot. Likely the share Button's onClick is bubbling up or a previous selection is reopening EmbedSettings via `selectedVideo` state. Functionally non-blocking — Share dialog still works on top — but visually confusing and an extra modal must be dismissed.", "selector": "[data-testid^='share-video-']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_share.py",
+    "/app/test_reports/pytest/pytest_iteration10.xml"
+  ],
+  "action_items": [
+    "Investigate why opening ShareLinksDialog via the share-video-{id} button also opens EmbedSettings dialog underneath. Likely a state-leak between sibling buttons (both setSelectedVideo) or a prior selection path. Either reset `showEmbedSettings` to false when opening share, or add explicit `e.stopPropagation()` / single source-of-truth for which modal is active."
+  ],
+  "critical_code_review_comments": [
+    "routes/share.py _hash_password: uses unsalted SHA-256. Acceptable for low-stakes share-link gating, but a per-link salt (or HMAC with a server secret) costs nothing and prevents rainbow-table reuse if the DB ever leaks. At minimum, document the choice.",
+    "routes/share.py list_share_links: issues TWO queries against db.share_links — one with password_hash projected out, then another with password_hash projected in to build pw_map. Replace with a SINGLE query that pulls password_hash and then strip it client-side after computing has_password. Halves DB round-trips.",
+    "routes/share.py resolve_share_link: increments view_count BEFORE returning, but the increment fires even on transient downstream failures (e.g., captions query crash) because update_one runs before the captions/find. Move the $inc to the very end (after all reads succeed) or accept the trade-off — currently view_count can over-count.",
+    "routes/share.py _is_expired: silently returns False on parse error. If a malformed expires_at slips into the DB, the link will be treated as never-expiring. Either reject at write-time (already done in create) OR fail-safe to True on parse error.",
+    "routes/share.py: no rate-limit / brute-force protection on password endpoint. An attacker can hammer GET /api/share/{token}?password=... unbounded. Add a per-token attempt counter or IP-based throttle for password-protected links.",
+    "routes/share.py: token = secrets.token_urlsafe(16) → 22 chars URL-safe is fine (~128 bits of entropy). No need for hashing at storage — collisions are astronomically unlikely. Good.",
+    "SharedVideoPage.jsx fetchShare: builds URL with `?password=${encodeURIComponent(pw)}` — passwords end up in server access logs and browser history. Consider switching to a POST /api/share/{token}/unlock endpoint that takes the password in the JSON body.",
+    "SharedVideoPage.jsx: HLS attached on every `data` change but no cleanup if `data` is replaced before unmount; the `return () => hls.destroy()` only runs on unmount. Minor — not user-facing.",
+    "ShareLinksDialog.jsx create(): `payload.password = password` is sent in plaintext over HTTPS — fine on the wire, but the value also lives in React state and will appear in any screen recording / DOM snapshot. Clear `password` immediately after a successful POST.",
+    "ShareLinksDialog.jsx: load() catches errors silently with `catch {}` — a 403 (e.g., session expired) leaves the empty list visible with no feedback. Surface a toast or inline error.",
+    "ShareLinksDialog.jsx: window.confirm for revoke is fine for desktop but blocks mobile webview. Consider an in-Dialog AlertDialog for consistency with the rest of the admin UI."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_share.py (new)"
+  ],
+  "success_rate": {"backend": "100% (19/19)", "frontend": "100% (admin create/badge/copy/revoke + public unprotected/password/wrong/correct/nonexistent all green)"},
+  "test_credentials": "Admin: StreamHost / TestPass123!@# ; Viewer: testviewer / Viewer123!",
+  "seed_data_creation": "Used existing video id 2ff9939e-53da-41eb-9edc-e9a9e602b4ca (PlayLab Test, processing_status=external). All test-created share_links (labels: X, VIP, PublicTest, NoAuth, ToRevoke, ToRevoke2, PWTest_*, PublicUITest, plus null-labelled expired-test entries) deleted from db.share_links after the run. DB is back to original state — verified zero share_links remain on the test video.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Feature #5 (Sharing Links) fully verified. Backend tests live in /app/backend/tests/test_share.py — uses module-scoped admin/viewer fixtures and an autouse cleanup that revokes every token created during the run. Safe to re-run. Public endpoint /api/share/{token} confirmed to work WITHOUT an Authorization header (verified twice — once via bare `requests.get` and once via Playwright with localStorage cleared). For the admin UI: only video cards with processing_status in ('ready','external') expose the share button; in this DB only the PlayLab Test card (id 2ff9939e-...) qualifies. Watch out for the EmbedSettings-opens-behind-Share UI quirk noted in frontend_issues. One feature (#6) remains in the 6-feature roadmap.",
+  "rca of the issue": "N/A — no failures. Single low-severity UI quirk noted: clicking the share-video-{id} button also opens the EmbedSettings dialog beneath the Share dialog. Suspected cause is shared `selectedVideo` state and an EmbedSettings dialog that re-mounts on selection change; not investigated deeply since the share flow itself works. Suggested fix: ensure mutually-exclusive state (e.g., a single `activeModal` enum) or explicitly setShowEmbedSettings(false) inside the share button onClick."
+}

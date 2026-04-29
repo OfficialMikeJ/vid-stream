@@ -19,6 +19,7 @@ from routes.users import router as users_router
 from routes.analytics import router as analytics_router
 from routes.comments import router as comments_router
 from routes.captions import router as captions_router
+from routes.share import router as share_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,6 +46,7 @@ app.include_router(users_router)
 app.include_router(analytics_router)
 app.include_router(comments_router)
 app.include_router(captions_router)
+app.include_router(share_router)
 
 
 async def initialize_admin_user():

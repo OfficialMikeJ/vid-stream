@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
+import SharedVideoPage from "./pages/SharedVideoPage";
 import { Toaster } from "@/components/ui/sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -58,6 +59,7 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Routes>
+          <Route path="/watch/:token" element={<SharedVideoPage />} />
           <Route
             path="/login"
             element={
