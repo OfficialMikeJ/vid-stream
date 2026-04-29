@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import VideoPlayer from "./VideoPlayer";
 import EmbedSettingsDialog from "./EmbedSettingsDialog";
 import VideoComments from "./VideoComments";
+import VideoCaptions from "./VideoCaptions";
 
 const VideoLibrary = ({ userRole = "admin" }) => {
   const isAdmin = userRole === "admin";
@@ -340,6 +341,9 @@ const VideoLibrary = ({ userRole = "admin" }) => {
             )}
           </DialogHeader>
           {selectedVideo && <VideoPlayer video={selectedVideo} />}
+          {selectedVideo && showPlayer && (
+            <VideoCaptions videoId={selectedVideo.id} isAdmin={isAdmin} />
+          )}
           {selectedVideo && showPlayer && (
             <VideoComments
               videoId={selectedVideo.id}
