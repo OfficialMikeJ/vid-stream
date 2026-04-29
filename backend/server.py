@@ -6,6 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import secrets
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any
@@ -17,6 +18,7 @@ import ffmpeg
 import json
 import shutil
 import asyncio
+import httpx
 from urllib.parse import urlparse
 
 ROOT_DIR = Path(__file__).parent
@@ -131,6 +133,33 @@ class PlayerTheme(BaseModel):
     logo_url: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# ── Storage Mesh Models ──────────────────────────────────────────────────────
+class MeshNode(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    node_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    url: str           # e.g., https://node2.example.com
+    api_key: str       # API key of the remote StreamHost node
+    status: str = "unknown"   # online | offline | unknown
+    last_seen: Optional[str] = None
+    storage_total_gb: Optional[float] = None
+    storage_used_gb: Optional[float] = None
+    video_count: Optional[int] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class MeshNodeCreate(BaseModel):
+    name: str
+    url: str
+    api_key: str
+
+# ── PlayLab Integration Models ───────────────────────────────────────────────
+class PlayLabSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    api_key: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
+    enabled: bool = True
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 # Helper functions
 def hash_password(password: str) -> str:
@@ -729,6 +758,259 @@ async def get_embed_code(video_id: str, current_user: User = Depends(get_current
 </script>'''
     
     return {"embed_code": embed_code}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STORAGE MESH ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _get_local_storage_stats() -> Dict[str, Any]:
+    """Return disk usage stats for the local video storage directory."""
+    usage = shutil.disk_usage(VIDEO_STORAGE_PATH)
+    return {
+        "storage_total_gb": round(usage.total / (1024 ** 3), 2),
+        "storage_used_gb": round(usage.used / (1024 ** 3), 2),
+        "storage_free_gb": round(usage.free / (1024 ** 3), 2),
+        "storage_used_pct": round(usage.used / usage.total * 100, 1),
+    }
+
+
+@api_router.get("/mesh/status")
+async def local_mesh_status():
+    """Reports this server's storage and video stats. Used by primary nodes to monitor this node."""
+    stats = _get_local_storage_stats()
+    video_count = await db.videos.count_documents({})
+    return {
+        "service": "StreamHost",
+        "version": "2025.12.17",
+        "status": "online",
+        "video_count": video_count,
+        **stats,
+    }
+
+
+@api_router.post("/mesh/nodes")
+async def add_mesh_node(node: MeshNodeCreate, current_user: User = Depends(get_current_user)):
+    """Register a remote StreamHost node in the mesh pool."""
+    existing = await db.mesh_nodes.find_one({"url": node.url}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="A node with this URL is already registered")
+
+    node_obj = MeshNode(**node.model_dump())
+
+    # Immediately attempt to ping the new node
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(
+                f"{node.url.rstrip('/')}/api/mesh/status",
+                headers={"Authorization": f"Bearer {node.api_key}"},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                node_obj.status = "online"
+                node_obj.last_seen = datetime.now(timezone.utc).isoformat()
+                node_obj.storage_total_gb = data.get("storage_total_gb")
+                node_obj.storage_used_gb = data.get("storage_used_gb")
+                node_obj.video_count = data.get("video_count")
+            else:
+                node_obj.status = "offline"
+    except Exception:
+        node_obj.status = "offline"
+
+    doc = node_obj.model_dump()
+    await db.mesh_nodes.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+
+@api_router.get("/mesh/nodes")
+async def get_mesh_nodes(current_user: User = Depends(get_current_user)):
+    """List all registered mesh nodes with their current storage stats."""
+    nodes = await db.mesh_nodes.find({}, {"_id": 0}).to_list(100)
+    local = _get_local_storage_stats()
+    local_video_count = await db.videos.count_documents({})
+    return {
+        "local_node": {
+            "name": "This Server (Primary)",
+            "status": "online",
+            "video_count": local_video_count,
+            **local,
+        },
+        "remote_nodes": nodes,
+    }
+
+
+@api_router.post("/mesh/nodes/{node_id}/ping")
+async def ping_mesh_node(node_id: str, current_user: User = Depends(get_current_user)):
+    """Ping a registered node to refresh its status and storage stats."""
+    node = await db.mesh_nodes.find_one({"node_id": node_id}, {"_id": 0})
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    update = {"status": "offline", "last_seen": datetime.now(timezone.utc).isoformat()}
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(
+                f"{node['url'].rstrip('/')}/api/mesh/status",
+                headers={"Authorization": f"Bearer {node['api_key']}"},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                update["status"] = "online"
+                update["storage_total_gb"] = data.get("storage_total_gb")
+                update["storage_used_gb"] = data.get("storage_used_gb")
+                update["video_count"] = data.get("video_count")
+    except Exception:
+        pass
+
+    await db.mesh_nodes.update_one({"node_id": node_id}, {"$set": update})
+    refreshed = await db.mesh_nodes.find_one({"node_id": node_id}, {"_id": 0})
+    return refreshed
+
+
+@api_router.delete("/mesh/nodes/{node_id}")
+async def remove_mesh_node(node_id: str, current_user: User = Depends(get_current_user)):
+    """Remove a node from the mesh pool."""
+    result = await db.mesh_nodes.delete_one({"node_id": node_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Node not found")
+    return {"message": "Node removed from mesh pool"}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PLAYLAB INTEGRATION ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+async def _get_or_create_playlab_settings() -> Dict[str, Any]:
+    settings = await db.playlab_settings.find_one({}, {"_id": 0})
+    if not settings:
+        obj = PlayLabSettings()
+        doc = obj.model_dump()
+        await db.playlab_settings.insert_one(doc)
+        return doc
+    return settings
+
+
+async def _verify_playlab_key(request: Request) -> Dict[str, Any]:
+    key = request.headers.get("X-PlayLab-Key") or request.query_params.get("api_key")
+    if not key:
+        raise HTTPException(status_code=401, detail="PlayLab API key required (X-PlayLab-Key header or api_key param)")
+    settings = await db.playlab_settings.find_one({}, {"_id": 0})
+    if not settings or settings.get("api_key") != key:
+        raise HTTPException(status_code=403, detail="Invalid PlayLab API key")
+    if not settings.get("enabled", True):
+        raise HTTPException(status_code=403, detail="PlayLab integration is disabled")
+    return settings
+
+
+@api_router.get("/playlab/settings")
+async def get_playlab_settings(current_user: User = Depends(get_current_user)):
+    """Get or auto-create the PlayLab API key and integration settings."""
+    settings = await _get_or_create_playlab_settings()
+    backend_url = os.environ.get('BACKEND_URL', 'http://localhost:8001')
+    return {
+        **settings,
+        "api_base_url": f"{backend_url}/api/playlab",
+        "videos_endpoint": f"{backend_url}/api/playlab/videos",
+        "video_detail_endpoint": f"{backend_url}/api/playlab/video/{{video_id}}",
+    }
+
+
+@api_router.post("/playlab/regenerate-key")
+async def regenerate_playlab_key(current_user: User = Depends(get_current_user)):
+    """Regenerate the PlayLab API key."""
+    new_key = secrets.token_urlsafe(32)
+    await db.playlab_settings.update_one(
+        {},
+        {"$set": {"api_key": new_key, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"api_key": new_key, "message": "API key regenerated successfully"}
+
+
+@api_router.patch("/playlab/settings")
+async def update_playlab_settings(enabled: bool, current_user: User = Depends(get_current_user)):
+    """Enable or disable the PlayLab integration."""
+    await db.playlab_settings.update_one(
+        {},
+        {"$set": {"enabled": enabled, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"message": f"PlayLab integration {'enabled' if enabled else 'disabled'}"}
+
+
+@api_router.get("/playlab/videos")
+async def playlab_list_videos(request: Request):
+    """
+    PlayLab Integration: Returns all ready videos with their HLS stream URLs.
+    Authenticate with X-PlayLab-Key header or ?api_key= query param.
+    """
+    await _verify_playlab_key(request)
+    backend_url = os.environ.get('BACKEND_URL', 'http://localhost:8001')
+    videos = await db.videos.find(
+        {"processing_status": "ready"},
+        {"_id": 0}
+    ).to_list(1000)
+
+    result = []
+    for v in videos:
+        result.append({
+            "id": v["id"],
+            "title": v["title"],
+            "description": v.get("description"),
+            "duration": v.get("duration"),
+            "thumbnail_url": f"{backend_url}/api/stream/thumbnail/{v['id']}",
+            "hls_url": f"{backend_url}/api/stream/hls/{v['id']}/playlist.m3u8",
+            "width": v.get("width"),
+            "height": v.get("height"),
+            "aspect_ratio": v.get("aspect_ratio"),
+            "file_size": v.get("file_size"),
+            "created_at": v.get("created_at"),
+            # PlayLab video table fields — use server=2 (link) with this URL
+            "playlab_video_url": f"{backend_url}/api/stream/hls/{v['id']}/playlist.m3u8",
+            "playlab_server_type": 2,  # 2 = external link in PlayLab
+        })
+    return {"count": len(result), "videos": result}
+
+
+@api_router.get("/playlab/video/{video_id}")
+async def playlab_get_video(video_id: str, request: Request):
+    """
+    PlayLab Integration: Returns a single video's stream URLs and metadata.
+    Authenticate with X-PlayLab-Key header or ?api_key= query param.
+    """
+    await _verify_playlab_key(request)
+    backend_url = os.environ.get('BACKEND_URL', 'http://localhost:8001')
+    video = await db.videos.find_one({"id": video_id}, {"_id": 0})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    hls_url = f"{backend_url}/api/stream/hls/{video_id}/playlist.m3u8"
+    return {
+        "id": video["id"],
+        "title": video["title"],
+        "description": video.get("description"),
+        "duration": video.get("duration"),
+        "thumbnail_url": f"{backend_url}/api/stream/thumbnail/{video_id}",
+        "hls_url": hls_url,
+        "width": video.get("width"),
+        "height": video.get("height"),
+        "aspect_ratio": video.get("aspect_ratio"),
+        "processing_status": video.get("processing_status"),
+        # PlayLab-ready fields for all 4 quality slots
+        "playlab": {
+            "server_type": 2,
+            "video_url": hls_url,
+            "server_seven_twenty": 2,
+            "seven_twenty_video": hls_url,
+            "server_four_eighty": 2,
+            "four_eighty_video": hls_url,
+            "server_three_sixty": 2,
+            "three_sixty_video": hls_url,
+            "server_thousand_eighty": 2,
+            "thousand_eighty_video": hls_url,
+        },
+    }
+
 
 # Include the router in the main app
 app.include_router(api_router)

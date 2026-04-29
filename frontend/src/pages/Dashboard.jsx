@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
-import { Film, FolderOpen, Upload, Settings, LogOut, Video } from "lucide-react";
+import { Film, FolderOpen, Upload, Settings, LogOut, Video, Network, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import VideoLibrary from "../components/VideoLibrary";
 import UploadVideo from "../components/UploadVideo";
 import VideoSettings from "../components/VideoSettings";
 import FolderManagement from "../components/FolderManagement";
+import MeshNetwork from "../components/MeshNetwork";
+import PlayLabIntegration from "../components/PlayLabIntegration";
 import Footer from "../components/Footer";
 
 const Dashboard = ({ onLogout }) => {
@@ -21,6 +23,8 @@ const Dashboard = ({ onLogout }) => {
     { id: "library", label: "Video Library", icon: Video, path: "/" },
     { id: "upload", label: "Upload", icon: Upload, path: "/upload" },
     { id: "folders", label: "Folders", icon: FolderOpen, path: "/folders" },
+    { id: "mesh", label: "Storage Mesh", icon: Network, path: "/mesh" },
+    { id: "playlab", label: "PlayLab", icon: Play, path: "/playlab" },
     { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
   ];
 
@@ -83,6 +87,8 @@ const Dashboard = ({ onLogout }) => {
             <Route path="/" element={<VideoLibrary />} />
             <Route path="/upload" element={<UploadVideo />} />
             <Route path="/folders" element={<FolderManagement />} />
+            <Route path="/mesh" element={<MeshNetwork />} />
+            <Route path="/playlab" element={<PlayLabIntegration />} />
             <Route path="/settings" element={<VideoSettings />} />
           </Routes>
         </main>
