@@ -1,0 +1,36 @@
+{
+  "summary": "Feature #6 — Per-IP API Rate Limiting (slowapi). Backend-only verification: 8/8 pytest cases green against the public preview URL. All four protected endpoints enforce their documented limits (login 10/min, change-password 5/min, comment 30/min, share-resolve 120/min), the 429 response is JSON-shaped {detail, limit} with Retry-After: 60, X-Forwarded-For drives separate buckets, login mixes right+wrong creds into one bucket, and unlimited endpoints (GET /api/videos) do not 429 even after 50 quick hits.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_rate_limit.py",
+    "/app/test_reports/pytest/pytest_iteration11.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "rate_limit.py:client_key — splits X-Forwarded-For on ',' and trusts the first hop. In a Kubernetes ingress that does NOT strip/replace XFF on inbound, any client can spoof XFF and bypass the limit (verified empirically — distinct XFF values map to distinct buckets, with no allow-list of trusted proxies). Mitigations: (a) only honour XFF when request.client.host is in a known proxy CIDR, or (b) use the right-most untrusted hop, or (c) pin to request.client.host and rely on the ingress to set X-Real-IP. As-is, this is a low-cost DDoS / brute-force evasion vector.",
+    "rate_limit.py: storage_uri default 'memory://' is process-local. Note in the source comment is correct, but worth flagging: in a multi-replica deployment (or after pod restart) the limit resets, which means a 6× brute-force factor per replica. Move to redis:// before scaling beyond 1 pod.",
+    "rate_limit.py:custom_rate_limit_handler — body field 'limit' is built from str(exc.detail). The shape happens to match the documented contract ('10 per 1 minute'), but it depends on slowapi's internal __str__; pinning to a stable schema (e.g., {'detail','limit','retry_after':60}) would survive a slowapi upgrade. Also consider including the actual key/IP in server logs (not response) for forensics.",
+    "rate_limit.py:custom_rate_limit_handler — Retry-After is hard-coded to '60'. Correct for all current limits (all 'per 1 minute') but will lie if a 'per N hours' limit is added later. Compute from exc or from the named limit.",
+    "rate_limit.py: no limit on the upload init endpoint despite LIMIT_UPLOAD_INIT being defined. Either wire it up in routes/upload.py or remove the unused constant to avoid drift.",
+    "routes/share.py:resolve_share_link — rate-limit covers the public token-resolve, but there's still no PER-TOKEN brute-force counter for password-protected links. A single XFF gets 120 password guesses per minute; from a botnet that's effectively unlimited. Add a per-token attempt counter (or lock the token after N wrong passwords).",
+    "Tests: rate-limit failures are visible to clients, but there is no server-side metric/log line on 429. Add a logger.warning in custom_rate_limit_handler with the client_key and route — essential for ops to spot abuse vs. real traffic spikes."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_rate_limit.py (new)"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "N/A — backend-only request"},
+  "test_credentials": "Admin: StreamHost / TestPass123!@# ; Viewer: testviewer / Viewer123! (read from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Each test minted its own throwaway X-Forwarded-For, so no shared bucket is poisoned. Comment test created up to 30 TEST_ratelimit_* comments and DELETEs them all in a finally block. Share test created one share-link with label 'TEST_ratelimit' and deletes it via class-scoped teardown. No residual DB state.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Feature #6 fully verified. Tests live at /app/backend/tests/test_rate_limit.py and are safe to re-run because every test uses a fresh random X-Forwarded-For (10.x.x.x) so previous runs never brick subsequent runs. Total runtime ~95 s. Note: REACT_APP_BACKEND_URL is NOT in the shell env by default — pytest must be invoked with it exported (or set in conftest). The share-resolve test uses ThreadPoolExecutor(max_workers=20) to fire 140 concurrent requests inside the 60-s window; sequential firing is too slow because slowapi uses a moving window and the first requests drop out before the 121st arrives. Critical follow-up: trusted-proxy validation around X-Forwarded-For (see code review) — currently ANY client can supply XFF and get a fresh bucket, which neutralises the brute-force protection at the auth endpoints.",
+  "rca of the issue": "N/A — no production failures. One self-inflicted test issue: initial sequential share-resolve test failed because 125 sequential HTTP calls span >60 s and slowapi's moving window lets the earliest entries expire before the 121st request arrives, so no 429 ever fires. Fixed by switching to a 20-thread ThreadPoolExecutor that completes 140 calls in ~5–10 s, well inside the 60-s window."
+}

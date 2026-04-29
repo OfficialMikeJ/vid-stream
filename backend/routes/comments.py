@@ -3,12 +3,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
 
 from database import db
 from models import User
 from security import get_current_user, require_admin
+from rate_limit import limiter, LIMIT_COMMENT
 
 router = APIRouter(prefix="/api")
 
@@ -30,7 +31,9 @@ async def list_comments(video_id: str, current_user: User = Depends(get_current_
 
 
 @router.post("/videos/{video_id}/comments")
+@limiter.limit(LIMIT_COMMENT)
 async def add_comment(
+    request: Request,
     video_id: str,
     payload: CommentCreate,
     current_user: User = Depends(get_current_user),

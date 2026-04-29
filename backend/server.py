@@ -5,10 +5,12 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from database import client, db
 from security import hash_password
 from models import User
+from rate_limit import limiter, custom_rate_limit_handler
 
 from routes.auth import router as auth_router
 from routes.videos import router as videos_router
@@ -28,6 +30,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="StreamHost API", version="2025.12.17")
+
+# Rate limiter wiring — exception handler + state attribute (slowapi requirement)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, custom_rate_limit_handler)
 
 app.add_middleware(
     CORSMiddleware,

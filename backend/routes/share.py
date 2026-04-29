@@ -10,12 +10,13 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
 from database import db
 from models import User
 from security import require_admin
+from rate_limit import limiter, LIMIT_SHARE_RESOLVE
 
 router = APIRouter(prefix="/api")
 
@@ -106,7 +107,8 @@ async def revoke_share_link(token: str, current_user: User = Depends(require_adm
 # ── Public endpoints ─────────────────────────────────────────────────────────
 
 @router.get("/share/{token}")
-async def resolve_share_link(token: str, password: Optional[str] = None):
+@limiter.limit(LIMIT_SHARE_RESOLVE)
+async def resolve_share_link(request: Request, token: str, password: Optional[str] = None):
     """Public: resolve a share token to a playable video.
 
     If the link is password-protected, the caller MUST pass `password`.

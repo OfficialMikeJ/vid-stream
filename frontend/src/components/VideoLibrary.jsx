@@ -321,6 +321,7 @@ const VideoLibrary = ({ userRole = "admin" }) => {
                       data-testid={`share-video-${video.id}`}
                       size="sm"
                       onClick={() => {
+                        setShowEmbedSettings(false);
                         setSelectedVideo(video);
                         setShowShareDialog(true);
                       }}
