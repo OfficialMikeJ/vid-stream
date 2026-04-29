@@ -87,8 +87,26 @@ Build a video hosting service named "StreamHost" with:
 
 ## What's Been Implemented
 
-### 2026-04-28 (This Session)
-- **True File Chunk Uploading (P0 COMPLETE)**
+### 2026-04-29 (This Session - continued)
+- **Storage Mesh System (COMPLETE)**
+  - `POST /api/mesh/nodes` — register remote StreamHost nodes
+  - `GET /api/mesh/nodes` — list nodes with real-time storage stats
+  - `POST /api/mesh/nodes/{id}/ping` — refresh node status + storage stats  
+  - `DELETE /api/mesh/nodes/{id}` — remove node from pool
+  - `GET /api/mesh/status` — this server's own stats (for use as secondary node)
+  - Frontend: Storage Mesh dashboard with pool summary, node cards, add-node form
+- **PlayLab Integration (COMPLETE)**
+  - `GET /api/playlab/settings` — get/create API key
+  - `POST /api/playlab/regenerate-key` — rotate API key
+  - `PATCH /api/playlab/settings?enabled=` — enable/disable integration
+  - `GET /api/playlab/videos` — list all ready videos with HLS URLs (X-PlayLab-Key auth)
+  - `GET /api/playlab/video/{id}` — single video with all PlayLab DB-ready fields
+  - Frontend: PlayLab Integration page with API key, setup instructions, live API test
+  - Auth: `X-PlayLab-Key` header or `?api_key=` query param
+  - Test: 100% pass rate (23/23 backend + all frontend flows)
+
+### 2026-04-28 (Previous)
+- **True File Chunk Uploading (COMPLETE)**
   - Backend: `POST /api/upload/init` + `POST /api/upload/chunk`
   - 5MB chunks, sequential, MongoDB state tracking, auto-reassemble on final chunk
   - Frontend: `UploadVideo.jsx` uses `File.slice()` for ALL file sizes
@@ -125,3 +143,18 @@ Build a video hosting service named "StreamHost" with:
 - [ ] Upload resume on network failure (retry failed chunks)
 - [ ] Video search / filter in library
 - [ ] Multi-user support (currently single admin)
+
+
+## Updated Backlog (2026-04-29)
+
+### Done
+- [x] True File Chunk Uploading
+- [x] Storage Mesh System  
+- [x] PlayLab Integration
+- [x] Python Desktop App API wiring
+
+### Backlog
+- [ ] Split server.py into route modules (1041 lines — too large)
+- [ ] Upload resume on network failure
+- [ ] Video search / filter in library
+- [ ] Player theme settings UI
