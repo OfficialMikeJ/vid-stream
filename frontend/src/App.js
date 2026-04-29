@@ -12,26 +12,38 @@ export const API = `${BACKEND_URL}/api`;
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState("admin");
+  const [username, setUsername] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       setIsAuthenticated(true);
+      setUserRole(localStorage.getItem("userRole") || "admin");
+      setUsername(localStorage.getItem("username") || "");
     }
     setLoading(false);
   }, []);
 
-  const handleLogin = (token, mustChangePassword) => {
+  const handleLogin = (token, mustChangePassword, role, user) => {
     localStorage.setItem("token", token);
+    localStorage.setItem("userRole", role || "admin");
+    localStorage.setItem("username", user || "");
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     setIsAuthenticated(true);
+    setUserRole(role || "admin");
+    setUsername(user || "");
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("username");
     delete axios.defaults.headers.common["Authorization"];
     setIsAuthenticated(false);
+    setUserRole("admin");
+    setUsername("");
   };
 
   if (loading) {
@@ -60,7 +72,7 @@ function App() {
             path="/*"
             element={
               isAuthenticated ? (
-                <Dashboard onLogout={handleLogout} />
+                <Dashboard onLogout={handleLogout} userRole={userRole} username={username} />
               ) : (
                 <Navigate to="/login" replace />
               )

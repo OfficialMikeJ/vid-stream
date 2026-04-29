@@ -32,10 +32,12 @@ const LoginPage = ({ onLogin }) => {
         setMustChangePassword(true);
         setCurrentPassword(password);
         localStorage.setItem("token", response.data.access_token);
+        localStorage.setItem("userRole", response.data.role || "admin");
+        localStorage.setItem("username", response.data.username || username);
         axios.defaults.headers.common["Authorization"] = `Bearer ${response.data.access_token}`;
         toast.info("Please change your password to continue");
       } else {
-        onLogin(response.data.access_token, false);
+        onLogin(response.data.access_token, false, response.data.role || "admin", response.data.username || username);
         toast.success("Login successful!");
       }
     } catch (error) {
@@ -67,7 +69,7 @@ const LoginPage = ({ onLogin }) => {
       });
 
       toast.success("Password changed successfully!");
-      onLogin(localStorage.getItem("token"), false);
+      onLogin(localStorage.getItem("token"), false, localStorage.getItem("userRole") || "admin", localStorage.getItem("username") || "");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Password change failed");
     } finally {

@@ -7,8 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Key, Copy, RefreshCw, ExternalLink, CheckCircle, Loader2, Play, List, Webhook, Send } from "lucide-react";
+import { Key, Copy, RefreshCw, ExternalLink, CheckCircle, Loader2, Play, List, Webhook, Send, Download } from "lucide-react";
 
 const CodeBlock = ({ code }) => {
   const copy = () => {
@@ -40,7 +42,13 @@ const PlayLabIntegration = () => {
   const [videos, setVideos] = useState(null);
   const [loadingVideos, setLoadingVideos] = useState(false);
 
-  // Webhook state
+  // Import state
+  const [importJson, setImportJson] = useState(`[
+  { "title": "My Video", "hls_url": "https://example.com/stream/playlist.m3u8" },
+  { "title": "Another Video", "hls_url": "https://example.com/stream2/playlist.m3u8", "description": "Optional description" }
+]`);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [savingWebhook, setSavingWebhook] = useState(false);
@@ -125,7 +133,6 @@ const PlayLabIntegration = () => {
 
   const loadVideos = async () => {
     if (!settings?.api_key) return;
-    setLoadingVideos(true);
     try {
       const r = await axios.get(`${API}/playlab/videos`, {
         headers: { "X-PlayLab-Key": settings.api_key },
@@ -135,6 +142,24 @@ const PlayLabIntegration = () => {
       toast.error("Failed to load videos from PlayLab API");
     } finally {
       setLoadingVideos(false);
+    }
+  };
+
+  const importVideos = async () => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const items = JSON.parse(importJson);
+      if (!Array.isArray(items)) throw new Error("Must be a JSON array");
+      const r = await axios.post(`${API}/playlab/import`, items);
+      setImportResult(r.data);
+      toast.success(`Imported ${r.data.imported} video(s)`);
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.message || "Import failed";
+      toast.error(msg);
+      setImportResult({ error: msg });
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -169,6 +194,20 @@ const PlayLabIntegration = () => {
           Connect StreamHost as a video source for PlayLab. PlayLab will use StreamHost's HLS streams for playback.
         </p>
       </div>
+
+      <Tabs defaultValue="api" className="w-full">
+        <TabsList className="bg-gray-900 border border-gray-800 mb-6">
+          <TabsTrigger value="api" data-testid="tab-api"
+            className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-400">
+            <Key className="w-4 h-4 mr-2" /> API & Sync
+          </TabsTrigger>
+          <TabsTrigger value="import" data-testid="tab-import"
+            className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-400">
+            <Download className="w-4 h-4 mr-2" /> Bulk Import
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="api" className="space-y-6">
 
       {/* API Key */}
       <Card className="bg-gray-900 border-gray-800 mb-6">
@@ -352,6 +391,83 @@ const PlayLabIntegration = () => {
           </CardContent>
         )}
       </Card>
+        </TabsContent>
+
+        {/* ── Bulk Import Tab ── */}
+        <TabsContent value="import" className="space-y-6">
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Download className="w-5 h-5 text-blue-400" />
+                Import from PlayLab / External Source
+                <Badge className="bg-blue-600/20 text-blue-300 border-blue-600/30 text-xs">Reverse Sync</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-400 text-sm">
+                Paste a JSON array of videos from PlayLab (or any source) to import them into StreamHost's library.
+                Each imported video will appear as an <strong className="text-gray-300">external</strong> video — playable
+                directly via the HLS URL you provide.
+              </p>
+              <div>
+                <Label className="text-gray-300 block mb-2">
+                  JSON Array <span className="text-gray-500 font-normal">— fields: title (required), hls_url (required), description, thumbnail_url</span>
+                </Label>
+                <Textarea
+                  data-testid="import-json-textarea"
+                  value={importJson}
+                  onChange={e => setImportJson(e.target.value)}
+                  rows={10}
+                  className="bg-gray-950 border-gray-700 text-green-400 font-mono text-sm resize-y"
+                />
+              </div>
+              <Button
+                data-testid="import-videos-btn"
+                onClick={importVideos}
+                disabled={importing}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {importing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
+                Import Videos
+              </Button>
+
+              {importResult && (
+                <div data-testid="import-result"
+                  className={`rounded-lg p-4 text-sm ${importResult.error
+                    ? "bg-red-900/20 border border-red-800 text-red-400"
+                    : "bg-green-900/20 border border-green-800 text-green-400"
+                  }`}>
+                  {importResult.error
+                    ? `Error: ${importResult.error}`
+                    : (
+                      <div>
+                        <p className="font-medium mb-2">{importResult.message}</p>
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                          {importResult.videos?.map(v => (
+                            <p key={v.id} className="text-xs text-green-300 font-mono">{v.title}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }
+                </div>
+              )}
+
+              <div className="bg-gray-800 rounded-lg p-4">
+                <p className="text-gray-300 text-sm font-medium mb-2">Example JSON format</p>
+                <pre className="text-xs text-gray-400 font-mono">{`[
+  {
+    "title": "Feature Film",
+    "hls_url": "https://cdn.playlab.com/stream/abc/playlist.m3u8",
+    "description": "Full length feature",
+    "thumbnail_url": "https://cdn.playlab.com/thumb/abc.jpg"
+  }
+]`}</pre>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -11,6 +11,8 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     username: str
     password_hash: str
+    role: str = "admin"          # "admin" | "viewer"
+    is_active: bool = True
     must_change_password: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -23,6 +25,28 @@ class LoginRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class CreateUserRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "viewer"
+    must_change_password: bool = True
+
+
+class PlayerSettings(BaseModel):
+    primary_color: str = "#3b82f6"
+    background_color: str = "#000000"
+    show_controls: bool = True
+    autoplay: bool = False
+    loop: bool = False
+
+
+class PlayLabImportItem(BaseModel):
+    title: str
+    hls_url: str
+    description: Optional[str] = None
+    thumbnail_url: Optional[str] = None
 
 
 class Folder(BaseModel):
@@ -47,6 +71,7 @@ class VideoMetadata(BaseModel):
     original_filename: str
     file_path: str
     thumbnail_path: Optional[str] = None
+    thumbnail_url: Optional[str] = None   # for externally-imported videos
     hls_path: Optional[str] = None
     duration: Optional[float] = None
     width: Optional[int] = None

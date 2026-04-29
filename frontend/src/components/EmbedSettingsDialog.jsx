@@ -1,228 +1,251 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { API } from "../App";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
-import { Code, Plus, X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Copy, X, Plus, Save, Loader2, Code, Monitor } from "lucide-react";
 
-const EmbedSettingsDialog = ({ video, open, onOpenChange, onGetEmbedCode }) => {
-  const [loading, setLoading] = useState(false);
-  const [allowedDomains, setAllowedDomains] = useState([]);
+const EmbedSettingsDialog = ({ video, onClose }) => {
+  const [settings, setSettings] = useState({
+    allowed_domains: [],
+    player_color: "#3b82f6",
+    show_controls: true,
+    autoplay: false,
+    loop: false,
+    custom_css: "",
+  });
   const [newDomain, setNewDomain] = useState("");
-  const [playerColor, setPlayerColor] = useState("#3b82f6");
-  const [showControls, setShowControls] = useState(true);
-  const [autoplay, setAutoplay] = useState(false);
-  const [loop, setLoop] = useState(false);
-  const [hasSettings, setHasSettings] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [embedCode, setEmbedCode] = useState("");
+  const [loadingCode, setLoadingCode] = useState(false);
+  const [hasExisting, setHasExisting] = useState(false);
 
   useEffect(() => {
-    if (open && video) {
-      fetchSettings();
-    }
-  }, [open, video]);
+    if (!video) return;
+    // Try to load existing embed settings
+    axios.get(`${API}/embed-settings/${video.id}`)
+      .then(r => {
+        setSettings({
+          allowed_domains: r.data.allowed_domains || [],
+          player_color: r.data.player_color || "#3b82f6",
+          show_controls: r.data.show_controls ?? true,
+          autoplay: r.data.autoplay ?? false,
+          loop: r.data.loop ?? false,
+          custom_css: r.data.custom_css || "",
+        });
+        setHasExisting(true);
+      })
+      .catch(() => setHasExisting(false));
 
-  const fetchSettings = async () => {
+    // Also pre-load embed code
+    loadEmbedCode();
+  }, [video]);
+
+  const loadEmbedCode = async () => {
+    if (!video) return;
+    setLoadingCode(true);
     try {
-      const response = await axios.get(`${API}/embed-settings/${video.id}`);
-      const settings = response.data;
-      setAllowedDomains(settings.allowed_domains || []);
-      setPlayerColor(settings.player_color || "#3b82f6");
-      setShowControls(settings.show_controls !== false);
-      setAutoplay(settings.autoplay || false);
-      setLoop(settings.loop || false);
-      setHasSettings(true);
-    } catch (error) {
-      if (error.response?.status === 404) {
-        setHasSettings(false);
-        setAllowedDomains([]);
-        setPlayerColor("#3b82f6");
-        setShowControls(true);
-        setAutoplay(false);
-        setLoop(false);
-      }
+      const r = await axios.get(`${API}/embed-code/${video.id}`);
+      setEmbedCode(r.data.embed_code);
+    } catch {
+      setEmbedCode("");
+    } finally {
+      setLoadingCode(false);
     }
   };
 
-  const handleAddDomain = () => {
-    if (newDomain.trim() && !allowedDomains.includes(newDomain.trim())) {
-      setAllowedDomains([...allowedDomains, newDomain.trim()]);
-      setNewDomain("");
-    }
-  };
-
-  const handleRemoveDomain = (domain) => {
-    setAllowedDomains(allowedDomains.filter((d) => d !== domain));
-  };
-
-  const handleSave = async () => {
-    setLoading(true);
+  const save = async () => {
+    setSaving(true);
     try {
-      const data = {
-        video_id: video.id,
-        allowed_domains: allowedDomains,
-        player_color: playerColor,
-        show_controls: showControls,
-        autoplay: autoplay,
-        loop: loop,
-      };
-
-      if (hasSettings) {
+      if (hasExisting) {
         await axios.patch(
           `${API}/embed-settings/${video.id}`,
           null,
           {
             params: {
-              allowed_domains: allowedDomains.join(","),
-              player_color: playerColor,
-              show_controls: showControls,
-              autoplay: autoplay,
-              loop: loop,
+              player_color: settings.player_color,
+              show_controls: settings.show_controls,
+              autoplay: settings.autoplay,
+              loop: settings.loop,
+              custom_css: settings.custom_css || null,
             },
           }
         );
+        // Update allowed_domains separately (array param)
+        const params = new URLSearchParams();
+        settings.allowed_domains.forEach(d => params.append("allowed_domains", d));
+        params.append("player_color", settings.player_color);
+        params.append("show_controls", settings.show_controls);
+        params.append("autoplay", settings.autoplay);
+        params.append("loop", settings.loop);
+        if (settings.custom_css) params.append("custom_css", settings.custom_css);
+        await axios.patch(`${API}/embed-settings/${video.id}?${params.toString()}`);
       } else {
-        await axios.post(`${API}/embed-settings`, data);
-        setHasSettings(true);
+        await axios.post(`${API}/embed-settings`, {
+          video_id: video.id,
+          ...settings,
+        });
+        setHasExisting(true);
       }
-
       toast.success("Embed settings saved");
-      onGetEmbedCode();
-    } catch (error) {
-      toast.error("Failed to save embed settings");
+      await loadEmbedCode();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to save embed settings");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
+  const copyCode = () => {
+    navigator.clipboard.writeText(embedCode);
+    toast.success("Embed code copied!");
+  };
+
+  const addDomain = () => {
+    const d = newDomain.trim().toLowerCase().replace(/^https?:\/\//, "");
+    if (!d) return;
+    if (settings.allowed_domains.includes(d)) {
+      toast.error("Domain already added");
+      return;
+    }
+    setSettings(s => ({ ...s, allowed_domains: [...s.allowed_domains, d] }));
+    setNewDomain("");
+  };
+
+  const removeDomain = (d) => {
+    setSettings(s => ({ ...s, allowed_domains: s.allowed_domains.filter(x => x !== d) }));
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-gray-900 border-gray-800 text-white">
+    <Dialog open={!!video} onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-2xl bg-gray-900 border-gray-800 text-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-white">Embed Settings</DialogTitle>
-          <DialogDescription className="text-gray-500">
-            Configure embed options for {video?.title}
-          </DialogDescription>
+          <DialogTitle className="text-white flex items-center gap-2">
+            <Code className="w-5 h-5 text-orange-400" />
+            Embed — {video?.title}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Domain Restrictions */}
-          <div className="space-y-3">
-            <Label className="text-gray-300">Allowed Domains</Label>
-            <p className="text-sm text-gray-500">Leave empty to allow all domains</p>
-            <div className="flex gap-2">
-              <Input
-                value={newDomain}
-                onChange={(e) => setNewDomain(e.target.value)}
-                placeholder="example.com"
-                className="bg-gray-800 border-gray-700 text-white"
-                onKeyPress={(e) => e.key === "Enter" && handleAddDomain()}
-              />
-              <Button
-                onClick={handleAddDomain}
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
+        <Tabs defaultValue="code" className="mt-2">
+          <TabsList className="bg-gray-800 border border-gray-700">
+            <TabsTrigger value="code" data-testid="embed-tab-code"
+              className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-400">
+              <Code className="w-3 h-3 mr-1" /> Embed Code
+            </TabsTrigger>
+            <TabsTrigger value="settings" data-testid="embed-tab-settings"
+              className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-400">
+              <Monitor className="w-3 h-3 mr-1" /> Player Settings
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ── Embed Code Tab ── */}
+          <TabsContent value="code" className="mt-4 space-y-4">
+            {loadingCode ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 text-orange-400 animate-spin" /></div>
+            ) : embedCode ? (
+              <>
+                <div className="relative group">
+                  <pre className="bg-gray-950 border border-gray-800 rounded-lg p-4 text-xs text-green-400 font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                    {embedCode}
+                  </pre>
+                  <Button size="sm" onClick={copyCode} data-testid="copy-embed-code-btn"
+                    className="absolute top-3 right-3 bg-orange-600 hover:bg-orange-700 text-white h-7 px-3 text-xs">
+                    <Copy className="w-3 h-3 mr-1" /> Copy
+                  </Button>
+                </div>
+                <p className="text-gray-500 text-xs">
+                  Paste this snippet anywhere on your website. Requires HLS.js for non-Safari browsers (included).
+                </p>
+              </>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p className="mb-3">No embed code available yet.</p>
+                {video?.processing_status !== "ready" && video?.processing_status !== "external" && (
+                  <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30">
+                    Video is still {video?.processing_status}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ── Settings Tab ── */}
+          <TabsContent value="settings" className="mt-4 space-y-5">
+            {/* Colors */}
+            <div>
+              <Label className="text-gray-300 block mb-2">Player Accent Color</Label>
+              <div className="flex gap-2 items-center">
+                <input type="color" value={settings.player_color}
+                  onChange={e => setSettings(s => ({ ...s, player_color: e.target.value }))}
+                  className="w-10 h-9 rounded border border-gray-700 bg-gray-800 cursor-pointer"
+                  data-testid="player-color-picker"
+                />
+                <Input value={settings.player_color}
+                  onChange={e => setSettings(s => ({ ...s, player_color: e.target.value }))}
+                  className="flex-1 bg-gray-800 border-gray-700 text-white font-mono text-sm"
+                />
+              </div>
             </div>
-            {allowedDomains.length > 0 && (
+
+            {/* Toggles */}
+            <div className="space-y-3">
+              {[
+                { key: "show_controls", label: "Show player controls" },
+                { key: "autoplay", label: "Autoplay" },
+                { key: "loop", label: "Loop" },
+              ].map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between">
+                  <Label className="text-gray-300">{label}</Label>
+                  <Switch
+                    checked={settings[key]}
+                    onCheckedChange={v => setSettings(s => ({ ...s, [key]: v }))}
+                    data-testid={`embed-toggle-${key}`}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Domain restriction */}
+            <div>
+              <Label className="text-gray-300 block mb-2">Allowed Domains <span className="text-gray-500 font-normal">(leave empty to allow all)</span></Label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  data-testid="domain-input"
+                  value={newDomain}
+                  onChange={e => setNewDomain(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && addDomain()}
+                  placeholder="example.com"
+                  className="flex-1 bg-gray-800 border-gray-700 text-white text-sm"
+                />
+                <Button size="sm" onClick={addDomain} className="bg-gray-700 hover:bg-gray-600 text-white shrink-0">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
               <div className="flex flex-wrap gap-2">
-                {allowedDomains.map((domain) => (
-                  <Badge
-                    key={domain}
-                    variant="secondary"
-                    className="bg-blue-600/20 text-blue-300 border-blue-500/30 gap-2"
-                  >
-                    {domain}
-                    <button
-                      onClick={() => handleRemoveDomain(domain)}
-                      className="hover:text-blue-100"
-                    >
+                {settings.allowed_domains.map(d => (
+                  <Badge key={d} className="bg-gray-800 border border-gray-700 text-gray-300 gap-1 pr-1">
+                    {d}
+                    <button onClick={() => removeDomain(d)} className="ml-1 hover:text-white">
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Player Color */}
-          <div className="space-y-3">
-            <Label htmlFor="player-color" className="text-gray-300">
-              Player Color
-            </Label>
-            <div className="flex gap-3 items-center">
-              <Input
-                id="player-color"
-                type="color"
-                value={playerColor}
-                onChange={(e) => setPlayerColor(e.target.value)}
-                className="w-20 h-12 bg-gray-800 border-gray-700"
-              />
-              <Input
-                value={playerColor}
-                onChange={(e) => setPlayerColor(e.target.value)}
-                className="flex-1 bg-gray-800 border-gray-700 text-white"
-              />
-            </div>
-          </div>
-
-          {/* Player Options */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-gray-300">Show Controls</Label>
-                <p className="text-sm text-gray-500">Display video player controls</p>
-              </div>
-              <Switch checked={showControls} onCheckedChange={setShowControls} />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-gray-300">Autoplay</Label>
-                <p className="text-sm text-gray-500">Start playing automatically</p>
-              </div>
-              <Switch checked={autoplay} onCheckedChange={setAutoplay} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-gray-300">Loop</Label>
-                <p className="text-sm text-gray-500">Replay video continuously</p>
-              </div>
-              <Switch checked={loop} onCheckedChange={setLoop} />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-4">
-            <Button
-              onClick={() => onOpenChange(false)}
-              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
-            >
-              Cancel
+            <Button onClick={save} disabled={saving} data-testid="save-embed-settings-btn"
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              Save &amp; Refresh Embed Code
             </Button>
-            <Button
-              onClick={handleSave}
-              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white gap-2"
-              disabled={loading}
-            >
-              <Code className="w-4 h-4" />
-              {loading ? "Saving..." : "Save & Get Embed Code"}
-            </Button>
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

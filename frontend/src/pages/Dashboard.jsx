@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Routes, Route, Link, useLocation } from "react-router-dom";
-import { Film, FolderOpen, Upload, Settings, LogOut, Video, Network, Play } from "lucide-react";
+import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
+import { Film, FolderOpen, Upload, Settings, LogOut, Video, Network, Play, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import VideoLibrary from "../components/VideoLibrary";
 import UploadVideo from "../components/UploadVideo";
 import VideoSettings from "../components/VideoSettings";
@@ -10,23 +11,25 @@ import MeshNetwork from "../components/MeshNetwork";
 import PlayLabIntegration from "../components/PlayLabIntegration";
 import Footer from "../components/Footer";
 
-const Dashboard = ({ onLogout }) => {
+const Dashboard = ({ onLogout, userRole = "admin", username = "" }) => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("library");
+  const isAdmin = userRole === "admin";
 
   useEffect(() => {
     const path = location.pathname.split("/")[1] || "library";
     setActiveTab(path);
   }, [location]);
 
-  const navItems = [
-    { id: "library", label: "Video Library", icon: Video, path: "/" },
-    { id: "upload", label: "Upload", icon: Upload, path: "/upload" },
-    { id: "folders", label: "Folders", icon: FolderOpen, path: "/folders" },
-    { id: "mesh", label: "Storage Mesh", icon: Network, path: "/mesh" },
-    { id: "playlab", label: "PlayLab", icon: Play, path: "/playlab" },
-    { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
+  const allNavItems = [
+    { id: "library", label: "Video Library", icon: Video, path: "/", roles: ["admin", "viewer"] },
+    { id: "upload", label: "Upload", icon: Upload, path: "/upload", roles: ["admin"] },
+    { id: "folders", label: "Folders", icon: FolderOpen, path: "/folders", roles: ["admin"] },
+    { id: "mesh", label: "Storage Mesh", icon: Network, path: "/mesh", roles: ["admin"] },
+    { id: "playlab", label: "PlayLab", icon: Play, path: "/playlab", roles: ["admin"] },
+    { id: "settings", label: "Settings", icon: Settings, path: "/settings", roles: ["admin"] },
   ];
+  const navItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -40,7 +43,12 @@ const Dashboard = ({ onLogout }) => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white">StreamHost</h1>
-                <p className="text-xs text-gray-500">Admin Panel</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-xs text-gray-500 truncate max-w-[80px]">{username || "Admin"}</p>
+                  <Badge className={`text-xs px-1.5 py-0 ${isAdmin ? "bg-blue-600/30 text-blue-300" : "bg-gray-700 text-gray-400"}`}>
+                    {isAdmin ? "Admin" : "Viewer"}
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
@@ -84,12 +92,12 @@ const Dashboard = ({ onLogout }) => {
         {/* Main Content */}
         <main className="flex-1 overflow-auto bg-gray-950 pb-16">
           <Routes>
-            <Route path="/" element={<VideoLibrary />} />
-            <Route path="/upload" element={<UploadVideo />} />
-            <Route path="/folders" element={<FolderManagement />} />
-            <Route path="/mesh" element={<MeshNetwork />} />
-            <Route path="/playlab" element={<PlayLabIntegration />} />
-            <Route path="/settings" element={<VideoSettings />} />
+            <Route path="/" element={<VideoLibrary userRole={userRole} />} />
+            <Route path="/upload" element={isAdmin ? <UploadVideo /> : <Navigate to="/" replace />} />
+            <Route path="/folders" element={isAdmin ? <FolderManagement /> : <Navigate to="/" replace />} />
+            <Route path="/mesh" element={isAdmin ? <MeshNetwork /> : <Navigate to="/" replace />} />
+            <Route path="/playlab" element={isAdmin ? <PlayLabIntegration /> : <Navigate to="/" replace />} />
+            <Route path="/settings" element={isAdmin ? <VideoSettings /> : <Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>

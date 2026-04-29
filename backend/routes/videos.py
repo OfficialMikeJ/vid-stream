@@ -11,8 +11,8 @@ from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, R
 from fastapi.responses import FileResponse
 
 from database import db, VIDEO_STORAGE_PATH
-from models import VideoMetadata, EmbedSettings, EmbedSettingsCreate, Folder, FolderCreate, User
-from security import get_current_user
+from models import VideoMetadata, EmbedSettings, EmbedSettingsCreate, Folder, FolderCreate, User, PlayerSettings
+from security import get_current_user, require_admin
 from services import process_video
 
 router = APIRouter(prefix="/api")
@@ -32,7 +32,7 @@ async def health_check():
 # ── Folders ──────────────────────────────────────────────────────────────────
 
 @router.post("/folders", response_model=Folder)
-async def create_folder(folder: FolderCreate, current_user: User = Depends(get_current_user)):
+async def create_folder(folder: FolderCreate, current_user: User = Depends(require_admin)):
     obj = Folder(**folder.model_dump())
     doc = obj.model_dump()
     doc["created_at"] = doc["created_at"].isoformat()
@@ -50,7 +50,7 @@ async def get_folders(current_user: User = Depends(get_current_user)):
 
 
 @router.delete("/folders/{folder_id}")
-async def delete_folder(folder_id: str, current_user: User = Depends(get_current_user)):
+async def delete_folder(folder_id: str, current_user: User = Depends(require_admin)):
     result = await db.folders.delete_one({"id": folder_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Folder not found")
@@ -65,7 +65,7 @@ async def upload_video(
     title: str = Form(...),
     description: Optional[str] = Form(None),
     folder_id: Optional[str] = Form(None),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     max_size = 56 * 1024 * 1024 * 1024
     file.file.seek(0, 2)
@@ -139,7 +139,7 @@ async def get_video(video_id: str, current_user: User = Depends(get_current_user
 
 
 @router.delete("/videos/{video_id}")
-async def delete_video(video_id: str, current_user: User = Depends(get_current_user)):
+async def delete_video(video_id: str, current_user: User = Depends(require_admin)):
     video = await db.videos.find_one({"id": video_id}, {"_id": 0})
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
@@ -162,7 +162,7 @@ async def update_video(
     title: Optional[str] = None,
     description: Optional[str] = None,
     folder_id: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     update_data = {}
     if title is not None:
@@ -183,7 +183,13 @@ async def update_video(
 @router.get("/stream/thumbnail/{video_id}")
 async def stream_thumbnail(video_id: str):
     video = await db.videos.find_one({"id": video_id}, {"_id": 0})
-    if not video or not video.get("thumbnail_path"):
+    if not video:
+        raise HTTPException(status_code=404, detail="Thumbnail not found")
+    # External (imported) videos may have a URL instead of a local file
+    if video.get("thumbnail_url"):
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(video["thumbnail_url"])
+    if not video.get("thumbnail_path"):
         raise HTTPException(status_code=404, detail="Thumbnail not found")
     path = Path(video["thumbnail_path"])
     if not path.exists():
@@ -225,7 +231,7 @@ async def stream_hls_segment(video_id: str, segment: str):
 
 @router.post("/embed-settings", response_model=EmbedSettings)
 async def create_embed_settings(
-    settings: EmbedSettingsCreate, current_user: User = Depends(get_current_user)
+    settings: EmbedSettingsCreate, current_user: User = Depends(require_admin)
 ):
     existing = await db.embed_settings.find_one({"video_id": settings.video_id}, {"_id": 0})
     if existing:
@@ -258,7 +264,7 @@ async def update_embed_settings(
     autoplay: Optional[bool] = None,
     loop: Optional[bool] = None,
     custom_css: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     update = {"updated_at": datetime.now(timezone.utc).isoformat()}
     if allowed_domains is not None:
@@ -315,3 +321,30 @@ async def get_embed_code(video_id: str, current_user: User = Depends(get_current
   }}
 </script>'''
     return {"embed_code": code}
+
+
+# ── Player Settings ──────────────────────────────────────────────────────────
+
+_DEFAULT_PLAYER = {
+    "primary_color": "#3b82f6",
+    "background_color": "#000000",
+    "show_controls": True,
+    "autoplay": False,
+    "loop": False,
+}
+
+
+@router.get("/settings/player")
+async def get_player_settings(current_user: User = Depends(get_current_user)):
+    s = await db.global_settings.find_one({"type": "player"}, {"_id": 0})
+    if not s:
+        return _DEFAULT_PLAYER
+    return {k: v for k, v in s.items() if k != "type"}
+
+
+@router.patch("/settings/player")
+async def update_player_settings(settings: PlayerSettings, current_user: User = Depends(require_admin)):
+    update = settings.model_dump()
+    update["type"] = "player"
+    await db.global_settings.update_one({"type": "player"}, {"$set": update}, upsert=True)
+    return {"message": "Player settings saved", **settings.model_dump()}

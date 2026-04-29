@@ -7,7 +7,7 @@ import asyncio
 
 from database import db, VIDEO_STORAGE_PATH
 from models import VideoMetadata, User
-from security import get_current_user
+from security import get_current_user, require_admin
 from services import process_video
 
 router = APIRouter(prefix="/api")
@@ -20,7 +20,7 @@ async def init_chunked_upload(
     total_size: int = Form(...),
     description: str = Form(None),
     folder_id: str = Form(None),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     """Initialize a chunked upload session. Returns upload_id and video_id."""
     from uuid import uuid4
@@ -70,9 +70,9 @@ async def upload_chunk(
     chunk_index: int = Form(...),
     total_chunks: int = Form(...),
     chunk: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
-    """Receive a single file chunk. Reassembles and starts processing once all chunks arrive."""
+    """Return the list of already-received chunks so the client can resume interrupted uploads."""
     meta = await db.uploads.find_one({"upload_id": upload_id}, {"_id": 0})
     if not meta:
         raise HTTPException(status_code=404, detail="Upload session not found")

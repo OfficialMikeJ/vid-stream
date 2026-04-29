@@ -1,0 +1,124 @@
+{
+  "summary": "Iteration 5 testing: Player Theme Settings (GET/PATCH), Multi-user support (GET/POST/PATCH/DELETE /api/users, viewer role enforcement), PlayLab Bulk Import (POST /api/playlab/import). All 33 backend tests passed. All major frontend flows verified. One MEDIUM UI bug found: admin seed user (StreamHost) shows incorrectly as 'Inactive' + 'Viewer' in the Users tab due to missing role/is_active fields in legacy MongoDB document.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/users",
+        "issue": "Admin seed user 'StreamHost' is missing 'role' and 'is_active' fields in MongoDB. initialize_admin_user() only creates new users — never updates existing ones with new fields. Raw document returned from GET /api/users lacks these fields for legacy admin. Authentication still works (User model defaults apply at token validation), but the raw listing is missing these fields.",
+        "priority": "MEDIUM"
+      }
+    ]
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "VideoSettings.jsx → UsersTab → StreamHost user card",
+        "issue": "StreamHost admin user card displays 'Inactive' badge and 'Viewer — Watch & embed' with Eye icon instead of 'Admin' + Shield icon. Root cause: MongoDB document for StreamHost lacks 'role' and 'is_active' fields (legacy pre-multi-user record). UI renders user.role === 'admin' as false → Eye icon shown; !user.is_active → Inactive badge shown. Does not affect auth/permissions — only the display in Settings > Users.",
+        "selector": "[data-testid='user-card-StreamHost']",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "GET /api/settings/player returns expected fields (primary_color, background_color, show_controls, autoplay, loop)",
+    "PATCH /api/settings/player saves colors and toggles",
+    "PATCH /api/settings/player persists — subsequent GET returns updated values",
+    "Viewer can read GET /api/settings/player (get_current_user)",
+    "Viewer cannot PATCH /api/settings/player (require_admin → 403)",
+    "POST /api/auth/login with testviewer/Viewer123! returns role=viewer",
+    "POST /api/auth/login with StreamHost/TestPass123!@# returns role=admin",
+    "GET /api/users returns list of users (admin, no passwords exposed)",
+    "POST /api/users creates viewer user with correct fields",
+    "PATCH /api/users/{id}?role=admin changes role — verified via GET",
+    "PATCH /api/users/{id}?is_active=false deactivates user — verified via GET",
+    "DELETE /api/users/{id} removes user — verified via GET returns absence",
+    "Admin cannot delete own account (400)",
+    "Admin cannot deactivate own account (400)",
+    "Invalid role 'superuser' rejected (400)",
+    "Duplicate username rejected (400)",
+    "Viewer cannot GET /api/users (403)",
+    "Viewer cannot POST /api/upload/init (403)",
+    "Viewer cannot DELETE /api/videos/{id} (403)",
+    "Viewer can GET /api/videos (200)",
+    "Admin can still GET /api/users (200)",
+    "POST /api/playlab/import with empty array returns 400",
+    "POST /api/playlab/import with valid JSON array creates external video records (imported=2)",
+    "Imported videos appear in GET /api/videos with processing_status=external",
+    "Import response contains id, title, hls_url for each video",
+    "Viewer cannot POST /api/playlab/import (403)",
+    "POST /api/playlab/import with >200 items returns 400",
+    "Regression: GET /api/health returns healthy",
+    "Regression: GET /api/videos authenticated works",
+    "Regression: GET /api/videos unauthenticated returns 403",
+    "Regression: GET /api/folders works",
+    "Regression: GET /api/playlab/settings works with api_key + webhook_url fields",
+    "Frontend: Settings page loads with Player Theme tab and Users tab",
+    "Frontend: Player Theme tab has color pickers (primary + bg), 3 toggles, Save Player Settings button, live preview",
+    "Frontend: Save Player Settings shows 'Player settings saved' toast",
+    "Frontend: Users tab shows user list (StreamHost, testviewer) with New User button",
+    "Frontend: Create User dialog opens with username, password, role, submit fields",
+    "Frontend: Creating user 'TEST_ui_viewer_iter5' shows success toast and appears in list",
+    "Frontend: PlayLab Integration page loads with API & Sync tab and Bulk Import tab",
+    "Frontend: Bulk Import tab has JSON textarea and Import Videos button",
+    "Frontend: Importing a video shows success result with title and 'Imported 1 video(s)' toast",
+    "Frontend: Viewer login shows 'testviewer' + 'Viewer' badge in sidebar",
+    "Frontend: Viewer only sees 'Video Library' nav item (Upload, Folders, Mesh, PlayLab, Settings hidden)",
+    "Frontend: Viewer sees only Embed button (no Edit/Delete) on video cards",
+    "Frontend: /upload redirect to / for viewer — protected routes working",
+    "Frontend: EmbedSettingsDialog has 'Embed Code' tab with inline code + Copy button",
+    "Frontend: EmbedSettingsDialog has 'Player Settings' tab with color picker, toggles, domain restriction, save button"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration5_features.py",
+    "/app/test_reports/pytest/pytest_iteration5.xml"
+  ],
+
+  "action_items": [
+    "MEDIUM: Fix initialize_admin_user() in server.py to update existing admin user document with missing 'role' and 'is_active' fields (e.g., use upsert with $setOnInsert for new fields, or add a migration that sets defaults for all users missing these fields). Fix: await db.users.update_many({'role': {'$exists': False}}, {'$set': {'role': 'admin', 'is_active': True}})",
+    "MEDIUM: The above DB migration will also fix the UI bug in Settings > Users where StreamHost appears as 'Inactive' + 'Viewer'. No frontend code change needed — just ensure MongoDB document has role and is_active."
+  ],
+
+  "critical_code_review_comments": [
+    "server.py: initialize_admin_user() only creates user if not existing — doesn't add new fields (role, is_active) to legacy admin document. A one-time migration or $setOnInsert pattern is needed.",
+    "routes/users.py: GET /api/users returns raw MongoDB document — missing fields for legacy users. Should either apply User model defaults before returning, or ensure DB always has required fields.",
+    "EmbedSettingsDialog.jsx: save() for hasExisting=true makes TWO PATCH calls (lines 67-88). The first PATCH uses json body with params object (no allowed_domains), the second uses URLSearchParams (with allowed_domains + other fields). This is redundant — only the second call is needed. The first call does nothing useful but adds an extra HTTP round trip."
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_iteration5_features.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (33/33 tests passed)",
+    "frontend": "95% (all critical flows pass; one UI display bug on admin user card in Users tab)"
+  },
+
+  "test_credentials": {
+    "admin": "StreamHost / TestPass123!@#",
+    "viewer": "testviewer / Viewer123!"
+  },
+
+  "seed_data_creation": "TEST_vieweruser_iter5 and TEST_ui_viewer_iter5 users created and deleted. UI_Test_Import_Video imported and deleted. TEST_Import_Video_1/2 and TEST_Import_Check_Title imported and deleted.",
+
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+
+  "context_for_next_testing_agent": "Iteration 5 tested: Player Theme Settings (GET/PATCH), Multi-user CRUD, viewer role enforcement, PlayLab Bulk Import. All backend tests pass. Only bug: StreamHost admin user missing role/is_active in MongoDB — fix is a one-time DB migration in server.py. Test files: test_iteration5_features.py. Previous test files: test_iteration4_features.py, test_chunked_upload.py, test_mesh_playlab.py. Admin pw: TestPass123!@#. Viewer: testviewer/Viewer123!. EmbedSettingsDialog redundant double PATCH issue is a code quality note, not a blocking bug.",
+
+  "rca_of_issues": {
+    "admin_user_missing_role_is_active": {
+      "bug": "StreamHost user card in Settings > Users shows 'Inactive' badge and 'Viewer' role/icon",
+      "root_cause": "The StreamHost admin user DB document was created in a previous iteration before 'role' and 'is_active' fields were added to the User model. The initialize_admin_user() function in server.py checks if user exists and returns early without updating — it never backfills missing fields for existing documents.",
+      "reproduction": "1. Login as admin → Settings → Users tab → See StreamHost showing 'Inactive' + 'Viewer — Watch & embed'",
+      "mitigation": "In server.py initialize_admin_user(), after finding existing user, check for missing fields and update: await db.users.update_one({'username': 'StreamHost', 'role': {'$exists': False}}, {'$set': {'role': 'admin', 'is_active': True}})",
+      "impact": "Cosmetic only — does not affect authentication or access control. JWT token validation uses User model defaults."
+    }
+  }
+}

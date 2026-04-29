@@ -2,14 +2,15 @@
 import os
 import secrets
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
+from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, HTTPException, Depends, Request
 
 from database import db
-from models import PlayLabSettings, User
-from security import get_current_user
+from models import PlayLabSettings, User, PlayLabImportItem
+from security import get_current_user, require_admin
 from services import _trigger_playlab_webhook
 
 router = APIRouter(prefix="/api")
@@ -154,4 +155,49 @@ async def get_video(video_id: str, request: Request):
             "server_three_sixty": 2, "three_sixty_video": hls_url,
             "server_thousand_eighty": 2, "thousand_eighty_video": hls_url,
         },
+    }
+
+
+@router.post("/playlab/import")
+async def import_videos(items: List[PlayLabImportItem], current_user: User = Depends(require_admin)):
+    """
+    Bulk-import external video URLs into the StreamHost library.
+    Each item becomes a video record with processing_status='external'.
+    """
+    if not items:
+        raise HTTPException(status_code=400, detail="No items to import")
+    if len(items) > 200:
+        raise HTTPException(status_code=400, detail="Maximum 200 items per import")
+
+    backend_url = os.environ.get("BACKEND_URL", "http://localhost:8001")
+    created = []
+
+    for item in items:
+        video_id = str(uuid4())
+        doc = {
+            "id": video_id,
+            "title": item.title,
+            "description": item.description,
+            "folder_id": None,
+            "original_filename": item.title,
+            "file_path": item.hls_url,
+            "thumbnail_path": None,
+            "thumbnail_url": item.thumbnail_url,
+            "hls_path": item.hls_url,
+            "duration": None,
+            "width": None,
+            "height": None,
+            "aspect_ratio": None,
+            "file_size": 0,
+            "format": "hls_external",
+            "processing_status": "external",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.videos.insert_one(doc)
+        created.append({"id": video_id, "title": item.title, "hls_url": item.hls_url})
+
+    return {
+        "imported": len(created),
+        "videos": created,
+        "message": f"Successfully imported {len(created)} video(s) from PlayLab",
     }

@@ -13,11 +13,15 @@ async def login(request: LoginRequest):
     user = await db.users.find_one({"username": request.username}, {"_id": 0})
     if not user or not verify_password(request.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = create_access_token(data={"sub": user["username"]})
+    if not user.get("is_active", True):
+        raise HTTPException(status_code=403, detail="Account is deactivated")
+    token = create_access_token(data={"sub": user["username"], "role": user.get("role", "admin")})
     return {
         "access_token": token,
         "token_type": "bearer",
         "must_change_password": user.get("must_change_password", False),
+        "role": user.get("role", "admin"),
+        "username": user["username"],
     }
 
 

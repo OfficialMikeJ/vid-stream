@@ -15,6 +15,7 @@ from routes.videos import router as videos_router
 from routes.upload import router as upload_router
 from routes.mesh import router as mesh_router
 from routes.playlab import router as playlab_router
+from routes.users import router as users_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,6 +38,7 @@ app.include_router(videos_router)
 app.include_router(upload_router)
 app.include_router(mesh_router)
 app.include_router(playlab_router)
+app.include_router(users_router)
 
 
 async def initialize_admin_user():

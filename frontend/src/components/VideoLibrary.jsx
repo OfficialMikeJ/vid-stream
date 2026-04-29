@@ -20,7 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import VideoPlayer from "./VideoPlayer";
 import EmbedSettingsDialog from "./EmbedSettingsDialog";
 
-const VideoLibrary = () => {
+const VideoLibrary = ({ userRole = "admin" }) => {
+  const isAdmin = userRole === "admin";
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -286,15 +287,17 @@ const VideoLibrary = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    data-testid={`edit-video-${video.id}`}
-                    size="sm"
-                    onClick={() => handleEdit(video)}
-                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
-                  >
-                    <Edit2 className="w-3 h-3 mr-1" />
-                    Edit
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      data-testid={`edit-video-${video.id}`}
+                      size="sm"
+                      onClick={() => handleEdit(video)}
+                      className="flex-1 bg-gray-700 hover:bg-gray-600 text-white"
+                    >
+                      <Edit2 className="w-3 h-3 mr-1" />
+                      Edit
+                    </Button>
+                  )}
                   <Button
                     data-testid={`embed-video-${video.id}`}
                     size="sm"
@@ -303,19 +306,21 @@ const VideoLibrary = () => {
                       setShowEmbedSettings(true);
                     }}
                     className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
-                    disabled={video.processing_status !== "ready"}
+                    disabled={video.processing_status !== "ready" && video.processing_status !== "external"}
                   >
                     <Code className="w-3 h-3 mr-1" />
                     Embed
                   </Button>
-                  <Button
-                    data-testid={`delete-video-${video.id}`}
-                    size="sm"
-                    onClick={() => handleDelete(video.id)}
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      data-testid={`delete-video-${video.id}`}
+                      size="sm"
+                      onClick={() => handleDelete(video.id)}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
