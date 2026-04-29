@@ -13,14 +13,29 @@ import ffmpeg
 import httpx
 
 from database import db, VIDEO_STORAGE_PATH
+from transcoding import get_preset, DEFAULT_PRESET_KEY
 
 logger = logging.getLogger(__name__)
 
 
-async def process_video(video_id: str) -> None:
+async def _resolve_preset_key(override: str | None = None) -> str:
+    """Pick the preset key: explicit override > user-configured default > built-in default."""
+    if override:
+        return override
+    cfg = await db.global_settings.find_one({"type": "transcoding"}, {"_id": 0})
+    return (cfg or {}).get("default_preset", DEFAULT_PRESET_KEY)
+
+
+async def process_video(video_id: str, preset_key: str | None = None) -> None:
     """Process a video: extract metadata, generate thumbnail, create HLS stream."""
     try:
-        await db.videos.update_one({"id": video_id}, {"$set": {"processing_status": "processing"}})
+        preset_key = await _resolve_preset_key(preset_key)
+        preset = get_preset(preset_key)
+
+        await db.videos.update_one(
+            {"id": video_id},
+            {"$set": {"processing_status": "processing", "transcoding_preset": preset_key}},
+        )
 
         video = await db.videos.find_one({"id": video_id}, {"_id": 0})
         if not video:
@@ -58,17 +73,34 @@ async def process_video(video_id: str) -> None:
             hls_dir.mkdir(exist_ok=True)
             hls_playlist = hls_dir / "playlist.m3u8"
 
+            # Build ffmpeg output kwargs from preset
+            output_kwargs = {
+                "format": "hls",
+                "start_number": 0,
+                "hls_time": 10,
+                "hls_list_size": 0,
+                "hls_segment_filename": str(hls_dir / "segment_%03d.ts"),
+            }
+            if preset["copy_video"]:
+                output_kwargs["vcodec"] = "copy"
+            else:
+                output_kwargs["vcodec"] = "libx264"
+                output_kwargs["preset"] = "veryfast"
+                if preset.get("video_bitrate"):
+                    output_kwargs["b:v"] = preset["video_bitrate"]
+                if preset.get("scale") and height and height > preset["scale"]:
+                    output_kwargs["vf"] = f"scale=-2:{preset['scale']}"
+            if preset["copy_audio"]:
+                output_kwargs["acodec"] = "copy"
+            else:
+                output_kwargs["acodec"] = "aac"
+                if preset.get("audio_bitrate"):
+                    output_kwargs["b:a"] = preset["audio_bitrate"]
+
             (
                 ffmpeg
                 .input(file_path)
-                .output(
-                    str(hls_playlist),
-                    format="hls",
-                    start_number=0,
-                    hls_time=10,
-                    hls_list_size=0,
-                    hls_segment_filename=str(hls_dir / "segment_%03d.ts"),
-                )
+                .output(str(hls_playlist), **output_kwargs)
                 .overwrite_output()
                 .run(quiet=True)
             )
@@ -84,6 +116,7 @@ async def process_video(video_id: str) -> None:
                     "thumbnail_path": str(thumbnail_path),
                     "hls_path": str(hls_playlist),
                     "processing_status": "ready",
+                    "transcoding_preset": preset_key,
                 }},
             )
 

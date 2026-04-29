@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Palette, Users, Plus, Trash2, RefreshCw, Loader2,
-  UserCheck, UserX, Shield, Eye, Save
+  UserCheck, UserX, Shield, Eye, Save, Film
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -399,6 +399,91 @@ const UsersTab = () => {
 };
 
 
+// ── Transcoding ──────────────────────────────────────────────────────────────
+
+const TranscodingTab = () => {
+  const [presets, setPresets] = useState([]);
+  const [defaultPreset, setDefaultPreset] = useState("source");
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    axios.get(`${API}/settings/transcoding`)
+      .then((r) => {
+        setPresets(r.data.presets || []);
+        setDefaultPreset(r.data.default_preset || "source");
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await axios.patch(`${API}/settings/transcoding?default_preset=${encodeURIComponent(defaultPreset)}`);
+      toast.success("Default transcoding preset saved");
+    } catch {
+      toast.error("Failed to save transcoding settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="text-gray-400">Loading...</div>;
+
+  return (
+    <div className="space-y-6 max-w-3xl" data-testid="transcoding-tab">
+      <p className="text-gray-400 text-sm">
+        The default preset is used for new uploads. Each upload can override this in the upload form.
+      </p>
+
+      <Card className="bg-gray-900 border-gray-800">
+        <CardHeader>
+          <CardTitle className="text-white text-sm">Default Preset</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3">
+            {presets.map((p) => (
+              <label
+                key={p.key}
+                data-testid={`preset-card-${p.key}`}
+                className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                  defaultPreset === p.key
+                    ? "border-blue-500 bg-blue-500/10"
+                    : "border-gray-800 bg-gray-950 hover:border-gray-700"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="preset"
+                  value={p.key}
+                  checked={defaultPreset === p.key}
+                  onChange={() => setDefaultPreset(p.key)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="text-white font-medium">{p.label}</div>
+                  <div className="text-xs text-gray-400 mt-1">{p.description}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+          <Button
+            onClick={save}
+            disabled={saving}
+            data-testid="save-transcoding"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Save Default
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+
 // ── Main Settings Page ───────────────────────────────────────────────────────
 
 const VideoSettings = () => {
@@ -416,6 +501,11 @@ const VideoSettings = () => {
             <Palette className="w-4 h-4 mr-2" />
             Player Theme
           </TabsTrigger>
+          <TabsTrigger value="transcoding" data-testid="tab-transcoding"
+            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-400">
+            <Film className="w-4 h-4 mr-2" />
+            Transcoding
+          </TabsTrigger>
           <TabsTrigger value="users" data-testid="tab-users"
             className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-400">
             <Users className="w-4 h-4 mr-2" />
@@ -425,6 +515,9 @@ const VideoSettings = () => {
 
         <TabsContent value="player">
           <PlayerThemeTab />
+        </TabsContent>
+        <TabsContent value="transcoding">
+          <TranscodingTab />
         </TabsContent>
         <TabsContent value="users">
           <UsersTab />

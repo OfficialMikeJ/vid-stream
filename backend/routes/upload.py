@@ -20,6 +20,7 @@ async def init_chunked_upload(
     total_size: int = Form(...),
     description: str = Form(None),
     folder_id: str = Form(None),
+    transcoding_preset: str = Form(None),
     current_user: User = Depends(require_admin),
 ):
     """Initialize a chunked upload session. Returns upload_id and video_id."""
@@ -37,6 +38,7 @@ async def init_chunked_upload(
         "title": title,
         "description": description,
         "folder_id": folder_id,
+        "transcoding_preset": transcoding_preset,
         "total_size": total_size,
         "chunks_received": [],
         "status": "in_progress",
@@ -121,13 +123,15 @@ async def upload_chunk(
         )
         doc = video.model_dump()
         doc["created_at"] = doc["created_at"].isoformat()
+        if meta.get("transcoding_preset"):
+            doc["transcoding_preset"] = meta["transcoding_preset"]
         await db.videos.insert_one(doc)
 
         await db.uploads.update_one(
             {"upload_id": upload_id}, {"$set": {"status": "complete"}}
         )
 
-        asyncio.create_task(process_video(video_id))
+        asyncio.create_task(process_video(video_id, meta.get("transcoding_preset")))
 
         return {"status": "complete", "video_id": video_id, "message": "Upload complete, processing started"}
 

@@ -14,6 +14,7 @@ from database import db, VIDEO_STORAGE_PATH
 from models import VideoMetadata, EmbedSettings, EmbedSettingsCreate, Folder, FolderCreate, User, PlayerSettings
 from security import get_current_user, require_admin
 from services import process_video
+from transcoding import list_presets, PRESETS, DEFAULT_PRESET_KEY
 
 router = APIRouter(prefix="/api")
 
@@ -65,6 +66,7 @@ async def upload_video(
     title: str = Form(...),
     description: Optional[str] = Form(None),
     folder_id: Optional[str] = Form(None),
+    transcoding_preset: Optional[str] = Form(None),
     current_user: User = Depends(require_admin),
 ):
     max_size = 56 * 1024 * 1024 * 1024
@@ -73,6 +75,9 @@ async def upload_video(
     file.file.seek(0)
     if file_size > max_size:
         raise HTTPException(status_code=413, detail="File too large. Maximum size is 56GB.")
+
+    if transcoding_preset and transcoding_preset not in PRESETS:
+        raise HTTPException(status_code=400, detail=f"Invalid transcoding preset: {transcoding_preset}")
 
     from uuid import uuid4
     video_id = str(uuid4())
@@ -94,8 +99,10 @@ async def upload_video(
     )
     doc = video.model_dump()
     doc["created_at"] = doc["created_at"].isoformat()
+    if transcoding_preset:
+        doc["transcoding_preset"] = transcoding_preset
     await db.videos.insert_one(doc)
-    asyncio.create_task(process_video(video_id))
+    asyncio.create_task(process_video(video_id, transcoding_preset))
     return {"video_id": video_id, "message": "Video uploaded and processing started"}
 
 
@@ -356,3 +363,57 @@ async def update_player_settings(settings: PlayerSettings, current_user: User = 
     update["type"] = "player"
     await db.global_settings.update_one({"type": "player"}, {"$set": update}, upsert=True)
     return {"message": "Player settings saved", **settings.model_dump()}
+
+
+# ── Transcoding Presets ──────────────────────────────────────────────────────
+
+@router.get("/settings/transcoding")
+async def get_transcoding_settings(current_user: User = Depends(get_current_user)):
+    """Return available presets and the current default preset."""
+    cfg = await db.global_settings.find_one({"type": "transcoding"}, {"_id": 0})
+    default_preset = (cfg or {}).get("default_preset", DEFAULT_PRESET_KEY)
+    return {
+        "default_preset": default_preset,
+        "presets": list_presets(),
+    }
+
+
+@router.patch("/settings/transcoding")
+async def update_transcoding_settings(
+    default_preset: str,
+    current_user: User = Depends(require_admin),
+):
+    """Set the default preset that will be used for new uploads."""
+    if default_preset not in PRESETS:
+        raise HTTPException(status_code=400, detail=f"Invalid preset: {default_preset}")
+    await db.global_settings.update_one(
+        {"type": "transcoding"},
+        {"$set": {"type": "transcoding", "default_preset": default_preset}},
+        upsert=True,
+    )
+    return {"default_preset": default_preset}
+
+
+@router.post("/videos/{video_id}/reprocess")
+async def reprocess_video(
+    video_id: str,
+    preset: Optional[str] = None,
+    current_user: User = Depends(require_admin),
+):
+    """Re-run transcoding on an existing video, optionally with a different preset."""
+    video = await db.videos.find_one({"id": video_id}, {"_id": 0})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    if not video.get("file_path") or not Path(video["file_path"]).exists():
+        raise HTTPException(status_code=400, detail="Original file not available for reprocessing")
+    if preset and preset not in PRESETS:
+        raise HTTPException(status_code=400, detail=f"Invalid preset: {preset}")
+
+    # Wipe old HLS output
+    if video.get("hls_path"):
+        old_dir = Path(video["hls_path"]).parent
+        if old_dir.exists():
+            shutil.rmtree(old_dir)
+
+    asyncio.create_task(process_video(video_id, preset))
+    return {"message": "Reprocessing started", "preset": preset or "default"}

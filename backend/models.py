@@ -80,6 +80,7 @@ class VideoMetadata(BaseModel):
     file_size: int
     format: Optional[str] = None
     processing_status: str = "pending"
+    transcoding_preset: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

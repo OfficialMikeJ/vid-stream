@@ -19,6 +19,9 @@ const UploadVideo = () => {
   const [description, setDescription] = useState("");
   const [folderId, setFolderId] = useState("");
   const [folders, setFolders] = useState([]);
+  const [presets, setPresets] = useState([]);
+  const [defaultPreset, setDefaultPreset] = useState("source");
+  const [transcodingPreset, setTranscodingPreset] = useState("default");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadPhase, setUploadPhase] = useState(""); // "uploading", "processing"
@@ -27,6 +30,7 @@ const UploadVideo = () => {
 
   useEffect(() => {
     fetchFolders();
+    fetchPresets();
   }, []);
 
   const fetchFolders = async () => {
@@ -35,6 +39,16 @@ const UploadVideo = () => {
       setFolders(response.data);
     } catch (error) {
       console.error("Failed to load folders");
+    }
+  };
+
+  const fetchPresets = async () => {
+    try {
+      const r = await axios.get(`${API}/settings/transcoding`);
+      setPresets(r.data.presets || []);
+      setDefaultPreset(r.data.default_preset || "source");
+    } catch {
+      // If admin hasn't visited settings yet, fall back gracefully
     }
   };
 
@@ -111,6 +125,9 @@ const UploadVideo = () => {
       initForm.append("total_size", file.size);
       if (description) initForm.append("description", description);
       if (folderId && folderId !== "none") initForm.append("folder_id", folderId);
+      if (transcodingPreset && transcodingPreset !== "default") {
+        initForm.append("transcoding_preset", transcodingPreset);
+      }
 
       const initResp = await axios.post(`${API}/upload/init`, initForm, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -359,6 +376,33 @@ const UploadVideo = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Transcoding Preset */}
+            <div className="space-y-2">
+              <Label htmlFor="preset" className="text-gray-300">
+                Transcoding Quality
+              </Label>
+              <Select value={transcodingPreset} onValueChange={setTranscodingPreset} disabled={uploading}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white" data-testid="upload-preset-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border-gray-700">
+                  <SelectItem value="default" className="text-white" data-testid="preset-default">
+                    Use library default ({presets.find((p) => p.key === defaultPreset)?.label || defaultPreset})
+                  </SelectItem>
+                  {presets.map((p) => (
+                    <SelectItem key={p.key} value={p.key} className="text-white" data-testid={`preset-${p.key}`}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                {transcodingPreset === "default"
+                  ? presets.find((p) => p.key === defaultPreset)?.description
+                  : presets.find((p) => p.key === transcodingPreset)?.description}
+              </p>
             </div>
 
             {/* Submit Button */}
