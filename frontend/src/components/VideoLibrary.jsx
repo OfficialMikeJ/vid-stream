@@ -156,8 +156,8 @@ const VideoLibrary = () => {
             </button>
           )}
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter} data-testid="status-filter">
-          <SelectTrigger className="w-40 bg-gray-900 border-gray-700 text-white">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger data-testid="status-filter" className="w-40 bg-gray-900 border-gray-700 text-white">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent className="bg-gray-900 border-gray-700">
@@ -168,8 +168,8 @@ const VideoLibrary = () => {
             <SelectItem value="failed" className="text-white hover:bg-gray-800">Failed</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={sortOrder} onValueChange={setSortOrder} data-testid="sort-order">
-          <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-white">
+        <Select value={sortOrder} onValueChange={setSortOrder}>
+          <SelectTrigger data-testid="sort-order" className="w-36 bg-gray-900 border-gray-700 text-white">
             <SelectValue placeholder="Sort" />
           </SelectTrigger>
           <SelectContent className="bg-gray-900 border-gray-700">

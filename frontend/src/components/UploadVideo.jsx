@@ -11,7 +11,7 @@ import { Upload, FileVideo, Loader2, CheckCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks for reliable upload
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks — supports resume on network failure
 
 const UploadVideo = () => {
   const [file, setFile] = useState(null);
@@ -233,6 +233,11 @@ const UploadVideo = () => {
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-white mb-2">Upload Video</h2>
         <p className="text-gray-500">Add new videos to your library</p>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="inline-flex items-center gap-1.5 bg-blue-900/30 border border-blue-800/50 text-blue-300 text-xs px-2.5 py-1 rounded-full">
+            Chunked upload — auto-resumes on network failure &middot; up to 56 GB
+          </span>
+        </div>
       </div>
 
       <Card className="bg-gray-900 border-gray-800">

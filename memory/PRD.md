@@ -1,5 +1,16 @@
 # StreamHost — Product Requirements Document
 
+## Session 2026-04-29 — Backlog Completion
+
+### Completed
+- **server.py modular split:** `database.py`, `models.py`, `security.py`, `services.py`, `routes/auth.py`, `routes/videos.py`, `routes/upload.py`, `routes/mesh.py`, `routes/playlab.py`. server.py is now ~60 lines.
+- **Upload resume on network failure:** `GET /api/upload/status/{upload_id}`; frontend saves upload_id to localStorage, resumes interrupted sessions, retries failed chunks 3x with exponential backoff (1s/2s/4s). Static "auto-resumes on network failure" badge in Upload UI.
+- **Video search/filter:** `GET /api/videos?search=&status=&sort=`; debounced search bar + status filter + sort dropdown in VideoLibrary.jsx.
+- **PlayLab webhook auto-sync:** `PATCH /api/playlab/webhook`, `POST /api/playlab/test-webhook`; `services._trigger_playlab_webhook()` auto-fires after `process_video()` completes. HMAC signature uses raw body bytes (consistent). Frontend PlayLab page has webhook config section.
+- **Testing:** 27/27 backend + 95% frontend (fixed duplicate component bug caught by testing agent).
+
+
+
 **Last Updated:** 2026-04-28
 
 ## Original Problem Statement

@@ -130,16 +130,16 @@ async def _trigger_playlab_webhook(video_id: str) -> None:
     }
 
     headers = {"Content-Type": "application/json"}
+    raw_body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
     if settings.get("webhook_secret"):
-        body_bytes = json.dumps(payload, separators=(",", ":")).encode()
         sig = hmac.new(
-            settings["webhook_secret"].encode(), body_bytes, hashlib.sha256
+            settings["webhook_secret"].encode(), raw_body, hashlib.sha256
         ).hexdigest()
         headers["X-StreamHost-Signature"] = f"sha256={sig}"
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(settings["webhook_url"], json=payload, headers=headers)
+            resp = await client.post(settings["webhook_url"], content=raw_body, headers=headers)
             logger.info(f"PlayLab webhook sent for {video_id}: HTTP {resp.status_code}")
     except Exception as e:
         logger.error(f"PlayLab webhook failed for {video_id}: {e}")
