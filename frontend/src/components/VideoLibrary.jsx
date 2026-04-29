@@ -1,11 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { API } from "../App";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Play, Trash2, Edit2, Copy, Clock, HardDrive, Eye, Code } from "lucide-react";
+import { Play, Trash2, Edit2, Copy, Clock, HardDrive, Eye, Code, Search, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +17,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import VideoPlayer from "./VideoPlayer";
 import EmbedSettingsDialog from "./EmbedSettingsDialog";
 
@@ -31,29 +32,48 @@ const VideoLibrary = () => {
   const [editDescription, setEditDescription] = useState("");
   const [showEmbedSettings, setShowEmbedSettings] = useState(false);
 
-  useEffect(() => {
-    fetchVideos();
-  }, []);
+  // Search + filter state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("newest");
 
-  const fetchVideos = async () => {
+  const fetchVideos = useCallback(async (search, status, sort) => {
     try {
-      const response = await axios.get(`${API}/videos`);
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (status && status !== "all") params.set("status", status);
+      if (sort) params.set("sort", sort);
+      const response = await axios.get(`${API}/videos?${params.toString()}`);
       setVideos(response.data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load videos");
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Debounced fetch on filter changes
+  useEffect(() => {
+    setLoading(true);
+    const timer = setTimeout(() => {
+      fetchVideos(searchTerm, statusFilter, sortOrder);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, statusFilter, sortOrder, fetchVideos]);
+
+  const clearSearch = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setSortOrder("newest");
   };
 
   const handleDelete = async (videoId) => {
     if (!window.confirm("Are you sure you want to delete this video?")) return;
-
     try {
       await axios.delete(`${API}/videos/${videoId}`);
       toast.success("Video deleted successfully");
-      fetchVideos();
-    } catch (error) {
+      fetchVideos(searchTerm, statusFilter, sortOrder);
+    } catch {
       toast.error("Failed to delete video");
     }
   };
@@ -64,7 +84,7 @@ const VideoLibrary = () => {
       setEmbedCode(response.data.embed_code);
       setSelectedVideo(video);
       setShowEmbedDialog(true);
-    } catch (error) {
+    } catch {
       toast.error("Failed to get embed code");
     }
   };
@@ -83,15 +103,13 @@ const VideoLibrary = () => {
 
   const handleSaveEdit = async () => {
     try {
-      const formData = new FormData();
-      formData.append("title", editTitle);
-      formData.append("description", editDescription);
-
-      await axios.patch(`${API}/videos/${selectedVideo.id}?title=${encodeURIComponent(editTitle)}&description=${encodeURIComponent(editDescription)}`);
+      await axios.patch(
+        `${API}/videos/${selectedVideo.id}?title=${encodeURIComponent(editTitle)}&description=${encodeURIComponent(editDescription)}`
+      );
       toast.success("Video updated successfully");
       setShowEditDialog(false);
-      fetchVideos();
-    } catch (error) {
+      fetchVideos(searchTerm, statusFilter, sortOrder);
+    } catch {
       toast.error("Failed to update video");
     }
   };
@@ -110,27 +128,90 @@ const VideoLibrary = () => {
     return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-white text-xl">Loading videos...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-8" data-testid="video-library">
-      <div className="mb-8">
+      <div className="mb-6">
         <h2 className="text-3xl font-bold text-white mb-2">Video Library</h2>
         <p className="text-gray-500">Manage and organize your video content</p>
       </div>
 
-      {videos.length === 0 ? (
+      {/* Search + Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6" data-testid="search-filter-bar">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Input
+            data-testid="video-search-input"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search videos by title or description..."
+            className="pl-9 bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter} data-testid="status-filter">
+          <SelectTrigger className="w-40 bg-gray-900 border-gray-700 text-white">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectItem value="all" className="text-white hover:bg-gray-800">All Status</SelectItem>
+            <SelectItem value="ready" className="text-white hover:bg-gray-800">Ready</SelectItem>
+            <SelectItem value="processing" className="text-white hover:bg-gray-800">Processing</SelectItem>
+            <SelectItem value="pending" className="text-white hover:bg-gray-800">Pending</SelectItem>
+            <SelectItem value="failed" className="text-white hover:bg-gray-800">Failed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortOrder} onValueChange={setSortOrder} data-testid="sort-order">
+          <SelectTrigger className="w-36 bg-gray-900 border-gray-700 text-white">
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
+          <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectItem value="newest" className="text-white hover:bg-gray-800">Newest First</SelectItem>
+            <SelectItem value="oldest" className="text-white hover:bg-gray-800">Oldest First</SelectItem>
+          </SelectContent>
+        </Select>
+        {(searchTerm || statusFilter !== "all" || sortOrder !== "newest") && (
+          <Button
+            data-testid="clear-filters-btn"
+            variant="outline"
+            onClick={clearSearch}
+            className="border-gray-700 text-gray-300 hover:bg-gray-800"
+          >
+            <X className="w-4 h-4 mr-1" />
+            Clear
+          </Button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-40">
+          <div className="text-white text-xl">Loading videos...</div>
+        </div>
+      ) : videos.length === 0 ? (
         <Card className="bg-gray-900 border-gray-800">
           <CardContent className="p-12 text-center">
             <Play className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No videos yet</h3>
-            <p className="text-gray-500">Upload your first video to get started</p>
+            {searchTerm || statusFilter !== "all" ? (
+              <>
+                <h3 className="text-xl font-semibold text-white mb-2">No matching videos</h3>
+                <p className="text-gray-500 mb-4">Try adjusting your search or filters</p>
+                <Button onClick={clearSearch} variant="outline" className="border-gray-700 text-gray-300 hover:bg-gray-800">
+                  Clear Filters
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-semibold text-white mb-2">No videos yet</h3>
+                <p className="text-gray-500">Upload your first video to get started</p>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (

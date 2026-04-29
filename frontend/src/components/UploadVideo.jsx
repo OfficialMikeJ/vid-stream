@@ -75,46 +75,103 @@ const UploadVideo = () => {
   const uploadChunked = async (file, title, description, folderId) => {
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const totalMB = (file.size / 1024 / 1024).toFixed(1);
+    const resumeKey = `streamhost_upload_${file.name}_${file.size}`;
 
-    // Step 1: Initialize upload session
-    setUploadPhase("Initializing upload...");
-    const initForm = new FormData();
-    initForm.append("filename", file.name);
-    initForm.append("title", title);
-    initForm.append("total_size", file.size);
-    if (description) initForm.append("description", description);
-    if (folderId && folderId !== "none") initForm.append("folder_id", folderId);
+    // ── Step 1: Check for a resumable session ──────────────────────────────
+    let upload_id = null;
+    let chunksAlreadyDone = [];
+    const savedId = localStorage.getItem(resumeKey);
 
-    const initResp = await axios.post(`${API}/upload/init`, initForm, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    const { upload_id } = initResp.data;
+    if (savedId) {
+      try {
+        setUploadPhase("Checking for resumable upload...");
+        const statusResp = await axios.get(`${API}/upload/status/${savedId}`);
+        if (statusResp.data.status === "in_progress") {
+          upload_id = savedId;
+          chunksAlreadyDone = statusResp.data.chunks_received || [];
+          if (chunksAlreadyDone.length > 0) {
+            setUploadPhase(`Resuming upload (${chunksAlreadyDone.length}/${totalChunks} chunks already uploaded)...`);
+            const resumeProgress = Math.round((chunksAlreadyDone.length / totalChunks) * 100);
+            setUploadProgress(resumeProgress);
+            await new Promise((r) => setTimeout(r, 800)); // Brief pause so user sees it
+          }
+        }
+      } catch {
+        // Session expired or not found — start fresh
+        localStorage.removeItem(resumeKey);
+      }
+    }
 
-    // Step 2: Upload chunks sequentially
+    // ── Step 2: Init new session if needed ────────────────────────────────
+    if (!upload_id) {
+      setUploadPhase("Initializing upload...");
+      const initForm = new FormData();
+      initForm.append("filename", file.name);
+      initForm.append("title", title);
+      initForm.append("total_size", file.size);
+      if (description) initForm.append("description", description);
+      if (folderId && folderId !== "none") initForm.append("folder_id", folderId);
+
+      const initResp = await axios.post(`${API}/upload/init`, initForm, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      upload_id = initResp.data.upload_id;
+      localStorage.setItem(resumeKey, upload_id);
+    }
+
+    // ── Step 3: Upload chunks (skip already done, retry on error) ─────────
+    const sendChunk = async (i) => {
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunkBlob = file.slice(start, end);
+      const form = new FormData();
+      form.append("upload_id", upload_id);
+      form.append("chunk_index", i);
+      form.append("total_chunks", totalChunks);
+      form.append("chunk", chunkBlob, `chunk_${i}`);
+      return axios.post(`${API}/upload/chunk`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    };
+
     for (let i = 0; i < totalChunks; i++) {
       if (abortControllerRef.current?.signal?.aborted) {
         throw new Error("Upload cancelled");
       }
 
-      const start = i * CHUNK_SIZE;
-      const end = Math.min(start + CHUNK_SIZE, file.size);
-      const chunkBlob = file.slice(start, end);
+      // Skip chunks already on the server
+      if (chunksAlreadyDone.includes(i)) {
+        const progress = Math.round(((i + 1) / totalChunks) * 100);
+        setUploadProgress(progress);
+        continue;
+      }
 
-      const chunkForm = new FormData();
-      chunkForm.append("upload_id", upload_id);
-      chunkForm.append("chunk_index", i);
-      chunkForm.append("total_chunks", totalChunks);
-      chunkForm.append("chunk", chunkBlob, `chunk_${i}`);
-
-      await axios.post(`${API}/upload/chunk`, chunkForm, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      // Send with up to 3 retries (exponential backoff: 1s, 2s, 4s)
+      let lastErr;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await sendChunk(i);
+          lastErr = null;
+          break;
+        } catch (err) {
+          lastErr = err;
+          if (attempt < 2) {
+            const wait = 1000 * Math.pow(2, attempt);
+            setUploadPhase(`Network error — retrying chunk ${i + 1} in ${wait / 1000}s...`);
+            await new Promise((r) => setTimeout(r, wait));
+          }
+        }
+      }
+      if (lastErr) throw lastErr;
 
       const progress = Math.round(((i + 1) / totalChunks) * 100);
       const uploadedMB = Math.min(((i + 1) * CHUNK_SIZE) / 1024 / 1024, file.size / 1024 / 1024).toFixed(1);
       setUploadProgress(progress);
       setUploadPhase(`Uploading: ${uploadedMB}MB / ${totalMB}MB (chunk ${i + 1}/${totalChunks})`);
     }
+
+    // Clean up resume key on success
+    localStorage.removeItem(resumeKey);
   };
 
   const handleUpload = async (e) => {

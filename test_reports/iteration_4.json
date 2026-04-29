@@ -1,0 +1,127 @@
+{
+  "summary": "Iteration 4 testing: server.py modular refactoring regression, video search/filter, upload resume status, PlayLab webhook auto-sync. Fixed critical frontend compilation error (duplicate component declarations in PlayLabIntegration.jsx). All 27 backend tests passed. All frontend flows verified.",
+
+  "critical_bug_fixed": {
+    "file": "/app/frontend/src/components/PlayLabIntegration.jsx",
+    "issue": "CodeBlock and PlayLabIntegration components declared TWICE in same file (lines 1-359 first version with webhook + lines 361-636 second version without webhook). Caused SyntaxError: Identifier 'CodeBlock' has already been declared at line 361. Frontend was COMPLETELY BROKEN - failed to compile.",
+    "fix": "Removed lines 361-636 (duplicate second version without webhook). Kept lines 1-359 which includes the new webhook section.",
+    "root_cause": "Main agent appended new webhook code to the existing file instead of replacing it, resulting in both old and new versions co-existing."
+  },
+
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "services.py: _trigger_playlab_webhook()",
+        "issue": "Potential HMAC signature mismatch: signature computed over compact JSON (json.dumps with separators=(',',':')) but payload sent via httpx json= parameter which uses its own serialization. If recipients verify signatures, they may fail. Low priority since webhook_secret is optional.",
+        "priority": "MEDIUM"
+      }
+    ]
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "VideoLibrary - Search/Filter bar",
+        "issues": [
+          "data-testid='status-filter' and data-testid='sort-order' are placed on the Radix UI <Select> wrapper, NOT on the <SelectTrigger> button. The testid doesn't appear on any rendered DOM element, reducing testability. Should move data-testid to <SelectTrigger>."
+        ]
+      },
+      {
+        "screen": "Upload page - Resume messaging",
+        "issues": [
+          "Resume/retry messaging ('Checking for resumable upload...', 'Resuming upload...', 'Network error — retrying chunk...') is DYNAMIC-only, visible only during active upload. No static indication of resume capability in the idle UI. By design but spec says 'visible in UI'."
+        ]
+      }
+    ]
+  },
+
+  "passed_tests": [
+    "GET /api/health returns status=healthy",
+    "POST /api/auth/login with StreamHost/TestPass123!@# returns access_token",
+    "POST /api/auth/login with wrong password returns 401",
+    "GET /api/videos returns list (authenticated)",
+    "GET /api/videos?search=test returns only matching videos (title/desc regex filter)",
+    "GET /api/videos?status=ready returns only ready videos",
+    "GET /api/videos?status=failed returns only failed videos",
+    "GET /api/videos?sort=oldest returns ascending date order",
+    "GET /api/videos?sort=newest returns descending date order",
+    "GET /api/videos?search=no_match returns empty list",
+    "GET /api/videos without auth returns 403",
+    "GET /api/upload/status/nonexistent returns 404",
+    "POST /api/upload/init creates session with upload_id and video_id",
+    "GET /api/upload/status/{upload_id} returns chunks_received=[] for new session",
+    "GET /api/upload/status without auth returns 403",
+    "GET /api/playlab/settings includes webhook_url field",
+    "PATCH /api/playlab/webhook with url+secret returns 200 with message",
+    "GET /api/playlab/settings shows updated webhook_url after PATCH",
+    "POST /api/playlab/test-webhook with no URL configured returns 400",
+    "POST /api/playlab/test-webhook with httpbin.org/post returns success HTTP 200",
+    "PATCH /api/playlab/webhook with empty url clears it",
+    "Regression: POST /api/auth/login still works after module split",
+    "Regression: GET /api/folders still works",
+    "Regression: GET /api/mesh/status still works",
+    "Regression: GET /api/mesh/nodes still works (returns {local_node, remote_nodes})",
+    "Regression: GET /api/playlab/videos still works",
+    "Regression: POST /api/upload/init still works",
+    "Frontend: Video Library loads with search bar visible (data-testid=video-search-input)",
+    "Frontend: Typing in search bar filters videos (debounced 300ms)",
+    "Frontend: Clear filters button appears when search/filter/sort is non-default",
+    "Frontend: Status filter dropdown selects 'Failed' (via role=option selector)",
+    "Frontend: Sort dropdown changes to 'Oldest First'",
+    "Frontend: Upload page loads with drop zone, title, description, folder, upload button",
+    "Frontend: PlayLab page loads with webhook section (URL input, secret input, save btn, test btn)",
+    "Frontend: Save Webhook saves settings and shows 'Webhook settings saved' toast",
+    "Frontend: Test Webhook sends to httpbin.org and shows 'Delivered! HTTP 200' result",
+    "Frontend: Storage Mesh page loads with Total Storage Pool, local node card (Online)",
+    "Frontend: All 6 sidebar nav items navigate correctly (Library, Upload, Folders, Mesh, PlayLab, Settings)"
+  ],
+
+  "hmac_investigation": {
+    "claim": "services.py has a bug in line calling hmac.new()",
+    "finding": "hmac.new(key, msg, digestmod) is valid Python 3.11 and returns HMAC object with .hexdigest(). Confirmed working with direct test. No runtime error.",
+    "actual_risk": "The signature body_bytes uses compact JSON (separators=(',',':')) but httpx json= parameter serializes differently. HMAC will be computed over compact JSON but payload sent may differ. Recipients verifying signatures may fail."
+  },
+
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4_features.py",
+    "/app/test_reports/pytest/pytest_iteration4.xml"
+  ],
+
+  "action_items": [
+    "Consider adding a static note/badge on Upload page about resume capability (e.g., 'Supports auto-resume on network failure')",
+    "Fix data-testid placement: move from <Select> wrapper to <SelectTrigger> in VideoLibrary.jsx for proper testability",
+    "MEDIUM: Fix HMAC signature in _trigger_playlab_webhook(): either use body_bytes to send the request (raw mode) or recompute signature from httpx-serialized body to avoid mismatch"
+  ],
+
+  "critical_code_review_comments": [
+    "PlayLabIntegration.jsx had duplicate component definitions - FIXED in this iteration",
+    "data-testid on Radix UI <Select> wrapper does not propagate to rendered DOM button - affects all Select components in VideoLibrary.jsx",
+    "HMAC signature in _trigger_playlab_webhook() is computed over compact JSON but sent via httpx json= parameter - these use different serialization, causing signature mismatch when webhook_secret is configured",
+    "UploadVideo.jsx: resume messaging (retry logic, 3x exponential backoff) is fully implemented but only visible during active upload - no static affordance in idle UI"
+  ],
+
+  "updated_files": [
+    "/app/frontend/src/components/PlayLabIntegration.jsx",
+    "/app/backend/tests/test_iteration4_features.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (27/27 tests passed)",
+    "frontend": "95% (all critical flows pass; minor testid placement note)"
+  },
+
+  "test_credentials": {
+    "username": "StreamHost",
+    "password": "TestPass123!@#"
+  },
+
+  "seed_data_creation": "TEST_Resume Upload Test and TEST_Status Check Upload and TEST_Regression Upload sessions created in db.uploads during tests",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 4 tested: modular refactoring (all routes still work), video search/filter, upload resume status, PlayLab webhook. Password: TestPass123!@#. Backend test file: /app/backend/tests/test_iteration4_features.py. PlayLabIntegration.jsx was fixed - duplicate definitions removed. Webhook is currently set to https://httpbin.org/post from this test run - may want to clear it. Previous test files: test_chunked_upload.py, test_mesh_playlab.py. Design: dark theme, good contrast, clean layout."
+}
