@@ -19,9 +19,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import VideoPlayer from "./VideoPlayer";
 import EmbedSettingsDialog from "./EmbedSettingsDialog";
+import VideoComments from "./VideoComments";
 
 const VideoLibrary = ({ userRole = "admin" }) => {
   const isAdmin = userRole === "admin";
+  const currentUsername = typeof window !== "undefined" ? localStorage.getItem("username") || "" : "";
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -330,7 +332,7 @@ const VideoLibrary = ({ userRole = "admin" }) => {
 
       {/* Video Player Dialog */}
       <Dialog open={showPlayer} onOpenChange={setShowPlayer}>
-        <DialogContent className="max-w-4xl bg-gray-900 border-gray-800 text-white">
+        <DialogContent className="max-w-4xl bg-gray-900 border-gray-800 text-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white">{selectedVideo?.title}</DialogTitle>
             {selectedVideo?.description && (
@@ -338,6 +340,13 @@ const VideoLibrary = ({ userRole = "admin" }) => {
             )}
           </DialogHeader>
           {selectedVideo && <VideoPlayer video={selectedVideo} />}
+          {selectedVideo && showPlayer && (
+            <VideoComments
+              videoId={selectedVideo.id}
+              currentUsername={currentUsername}
+              currentUserRole={userRole}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
