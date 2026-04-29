@@ -1,171 +1,172 @@
 # StreamHost — Product Requirements Document
 
-## Session 2026-04-29 — Backlog Completion
-
-### Completed
-- **server.py modular split:** `database.py`, `models.py`, `security.py`, `services.py`, `routes/auth.py`, `routes/videos.py`, `routes/upload.py`, `routes/mesh.py`, `routes/playlab.py`. server.py is now ~60 lines.
-- **Upload resume on network failure:** `GET /api/upload/status/{upload_id}`; frontend saves upload_id to localStorage, resumes interrupted sessions, retries failed chunks 3x with exponential backoff (1s/2s/4s). Static "auto-resumes on network failure" badge in Upload UI.
-- **Video search/filter:** `GET /api/videos?search=&status=&sort=`; debounced search bar + status filter + sort dropdown in VideoLibrary.jsx.
-- **PlayLab webhook auto-sync:** `PATCH /api/playlab/webhook`, `POST /api/playlab/test-webhook`; `services._trigger_playlab_webhook()` auto-fires after `process_video()` completes. HMAC signature uses raw body bytes (consistent). Frontend PlayLab page has webhook config section.
-- **Testing:** 27/27 backend + 95% frontend (fixed duplicate component bug caught by testing agent).
-
-
-
-**Last Updated:** 2026-04-28
+**Last Updated:** 2026-04-29
 
 ## Original Problem Statement
 Build a video hosting service named "StreamHost" with:
 - Upload videos (chunked for up to 56GB), process via FFmpeg (thumbnails, aspect ratio, HLS)
 - Custom folder management and embedded streaming
-- Local storage via filesystem (not GridFS)
-- Single admin authentication with forced first-login password change
-- Custom global player theme settings and embed settings (domain restriction, player colors)
-- Desktop Application (Python Tkinter) for Windows with `.bat` quick-start scripts
-- WordPress Integration: StreamHost Connector plugin + StreamLab Invites plugin
+- Local storage via filesystem
+- Multi-user authentication (admin / viewer roles); forced first-login password change
+- Custom global player theme & per-video embed settings (domain restriction, colors)
+- Desktop Application (Python Tkinter) for Windows
+- "PlayLab" PHP integration: serve video files + bulk reverse import + webhook auto-sync
+- Storage Mesh: pool storage from multiple StreamHost servers
 - UI/UX: Dark theme (Black/Gray), colored buttons (Green/Red/Gray/Black/Blue/Orange)
 - Footer: "Copyright 2026 StreamHost | StreamHost Ver: 2025.12.17"
-- Production Docker Compose setup for Ubuntu 20.4+ with Nginx
+- *(Removed by user: Docker E2E deployment tests, WordPress plugin testing.)*
 
 ## Tech Stack
-- **Frontend:** React, Tailwind CSS, Shadcn UI
-- **Backend:** FastAPI, Python, Motor (Async MongoDB), FFmpeg, JWT
-- **Database:** MongoDB (filesystem storage for videos)
+- **Frontend:** React, Tailwind CSS, Shadcn UI, hls.js
+- **Backend:** FastAPI (modular routers), Python, Motor (async MongoDB), FFmpeg, JWT, slowapi (rate limiting)
+- **Database:** MongoDB
 - **Desktop:** Python Tkinter + ttkbootstrap
-- **Deployment:** Docker Compose, Nginx
 
 ## Default Credentials
-- Username: `StreamHost`
-- Password: `password1234!@#` (forces password change on first login)
-
-## Key API Endpoints
-- `POST /api/auth/login`
-- `POST /api/auth/change-password`
-- `POST /api/upload/init` — initialize chunked upload session
-- `POST /api/upload/chunk` — send individual 5MB chunk
-- `GET /api/videos` — list videos
-- `GET /api/videos/{id}` — video detail
-- `DELETE /api/videos/{id}` — delete
-- `POST /api/folders` / `GET /api/folders` / `DELETE /api/folders/{id}`
-- `GET /api/stream/hls/{id}/playlist.m3u8` — HLS streaming
-- `GET /api/stream/thumbnail/{id}` — thumbnail
-- `POST /api/embed-settings` / `GET /api/embed-settings/{id}` / `PATCH /api/embed-settings/{id}`
-- `GET /api/embed-code/{id}` — get embed HTML
-- `GET /api/health` — health check
-
-## DB Schema
-- **users:** `{id, username, password_hash, must_change_password, created_at}`
-- **videos:** `{id, title, description, folder_id, original_filename, file_path, thumbnail_path, hls_path, duration, width, height, aspect_ratio, file_size, format, processing_status, created_at}`
-- **folders:** `{id, name, parent_id, created_at}`
-- **embed_settings:** `{id, video_id, allowed_domains, player_color, show_controls, autoplay, loop, custom_css, created_at, updated_at}`
-- **uploads:** `{upload_id, video_id, filename, title, description, folder_id, total_size, chunks_received, status, created_at}` ← chunked upload tracking
+See `/app/memory/test_credentials.md` for current admin/viewer accounts.
 
 ## Code Architecture
 ```
 /app/
 ├── backend/
-│   ├── server.py           # All API routes
-│   ├── video_storage/
-│   │   ├── originals/
-│   │   ├── thumbnails/
-│   │   ├── hls/
-│   │   └── temp/           # Chunked upload temp storage
+│   ├── server.py            # Entry point, router registration, startup admin seed
+│   ├── database.py          # Motor client + storage paths
+│   ├── models.py            # Pydantic models
+│   ├── security.py          # JWT, hashing, get_current_user, require_admin
+│   ├── services.py          # Background: process_video (ffmpeg+HLS), webhook delivery
+│   ├── transcoding.py       # Preset definitions (source, 1080p, 720p, 480p)
+│   ├── rate_limit.py        # slowapi limiter, XFF-aware client_key
+│   ├── routes/
+│   │   ├── auth.py          # /auth/login, /auth/change-password (rate-limited)
+│   │   ├── videos.py        # /videos, /folders, /stream/*, /embed-*, /settings/{player,transcoding}, /reprocess
+│   │   ├── upload.py        # /upload/init, /upload/chunk, /upload/status (chunked + resume)
+│   │   ├── mesh.py          # /mesh/* — storage mesh
+│   │   ├── playlab.py       # /playlab/* — webhook + bulk import
+│   │   ├── users.py         # /users — admin user CRUD
+│   │   ├── analytics.py     # /analytics/{overview,timeline,videos,video/{id}}
+│   │   ├── comments.py      # /videos/{id}/comments + /comments (mod list)
+│   │   ├── captions.py      # /videos/{id}/captions, /captions/{id} (public VTT)
+│   │   └── share.py         # /videos/{id}/share, /share/{token} (public)
 │   └── tests/
-│       └── test_chunked_upload.py
-├── desktop-app/
-│   ├── streamhost_desktop.py  # Tkinter desktop client
-│   ├── StreamHost.bat
-│   └── README.md
-├── docker/
-│   ├── docker-compose.prod.yml
-│   ├── ubuntu-setup.sh
-│   └── nginx/nginx.conf
-├── frontend/
-│   └── src/
-│       ├── components/
-│       │   ├── UploadVideo.jsx     # True chunked upload
-│       │   ├── VideoLibrary.jsx
-│       │   ├── FolderManagement.jsx
-│       │   ├── EmbedSettingsDialog.jsx
-│       │   ├── VideoPlayer.jsx
-│       │   ├── VideoSettings.jsx
-│       │   └── Footer.jsx
-│       └── pages/
-├── wordpress-plugin/
-└── wordpress-plugin-invites/
+└── frontend/src/
+    ├── pages/
+    │   ├── Dashboard.jsx
+    │   ├── LoginPage.jsx
+    │   └── SharedVideoPage.jsx     # Public /watch/:token
+    └── components/
+        ├── VideoLibrary.jsx
+        ├── UploadVideo.jsx          # Chunked upload + transcoding preset selector
+        ├── VideoPlayer.jsx          # HLS + caption tracks
+        ├── VideoSettings.jsx        # Player theme + Transcoding tab + Users tab
+        ├── FolderManagement.jsx
+        ├── EmbedSettingsDialog.jsx
+        ├── MeshNetwork.jsx
+        ├── PlayLabIntegration.jsx
+        ├── AnalyticsDashboard.jsx   # Stats cards + timeline + top videos
+        ├── VideoComments.jsx        # Per-video comment thread
+        ├── VideoCaptions.jsx        # Caption upload + list (admin)
+        ├── ShareLinksDialog.jsx     # Admin share-link manager
+        └── Footer.jsx
 ```
+
+## Key API Endpoints
+### Auth (rate-limited 10/min login, 5/min password)
+- `POST /api/auth/login`, `POST /api/auth/change-password`
+
+### Videos / Streaming
+- `POST /api/videos/upload` (with `transcoding_preset`)
+- `POST /api/upload/init`, `POST /api/upload/chunk`, `GET /api/upload/status/{id}`
+- `GET /api/videos` (search, status, sort), `GET /api/videos/{id}`, `DELETE /api/videos/{id}`, `PATCH /api/videos/{id}`
+- `POST /api/videos/{id}/reprocess?preset=`
+- `GET /api/stream/hls/{id}/playlist.m3u8` (auto-records analytics view)
+- `GET /api/stream/hls/{id}/{segment}`, `GET /api/stream/thumbnail/{id}`
+
+### Folders, Embed, Player
+- `POST/GET/DELETE /api/folders`
+- `POST/GET/PATCH /api/embed-settings`, `GET /api/embed-code/{id}`
+- `GET/PATCH /api/settings/player`, `GET/PATCH /api/settings/transcoding`
+
+### Multi-user (admin only)
+- `GET/POST /api/users`, `PATCH /api/users/{id}`, `DELETE /api/users/{id}`
+
+### Mesh / PlayLab
+- `GET/POST/DELETE /api/mesh/nodes`, `POST /api/mesh/nodes/{id}/ping`, `GET /api/mesh/status`
+- `GET/PATCH /api/playlab/settings`, `POST /api/playlab/regenerate-key`
+- `GET /api/playlab/videos`, `GET /api/playlab/video/{id}`
+- `POST /api/playlab/import`, `PATCH /api/playlab/webhook`, `POST /api/playlab/test-webhook`
+
+### Analytics (admin)
+- `GET /api/analytics/overview` — total videos/views/storage/duration/24h
+- `GET /api/analytics/timeline?days=N` — daily view series
+- `GET /api/analytics/videos?sort=views|unique|recent` — top videos
+- `GET /api/analytics/video/{id}` — single-video stats (admin + viewer)
+
+### Comments
+- `GET/POST /api/videos/{id}/comments` (any user; rate-limited POST 30/min)
+- `DELETE /api/videos/{id}/comments/{cid}` (admin or own)
+- `GET /api/comments` — admin moderation list
+
+### Captions
+- `GET /api/videos/{id}/captions`, `POST /api/videos/{id}/captions` (admin)
+- `GET /api/captions/{cid}` — PUBLIC (used by `<track>`)
+- `DELETE /api/videos/{id}/captions/{cid}` (admin)
+
+### Share Links
+- `POST /api/videos/{id}/share` (admin) — body: `{label?, password?, expires_at?}`
+- `GET /api/videos/{id}/share` (admin) — list links
+- `DELETE /api/share/{token}` (admin)
+- `GET /api/share/{token}` — PUBLIC, rate-limited 120/min, returns `{requires_password}` then full payload after `?password=`
+
+## DB Schema
+- **users**: `{id, username, password_hash, role, is_active, must_change_password, created_at}`
+- **videos**: `{id, title, description, folder_id, original_filename, file_path, thumbnail_path, hls_path, duration, width, height, aspect_ratio, file_size, format, processing_status, transcoding_preset, created_at}`
+- **folders**: `{id, name, parent_id, created_at}`
+- **embed_settings**: `{id, video_id, allowed_domains, player_color, show_controls, autoplay, loop, custom_css}`
+- **uploads**: `{upload_id, video_id, filename, title, description, folder_id, transcoding_preset, total_size, chunks_received, status}`
+- **global_settings**: `{type:'player'|'transcoding', ...}`
+- **mesh_nodes**, **playlab_settings**: as before
+- **video_views**: `{video_id, visitor (hash), referrer, timestamp}` — analytics
+- **comments**: `{id, video_id, username, user_role, body, created_at}`
+- **captions**: `{id, video_id, language, label, is_default, file_path, size_bytes, created_at}`
+- **share_links**: `{id, token, video_id, label, expires_at, password_hash, view_count, created_by, created_at}`
 
 ---
 
 ## What's Been Implemented
 
-### 2026-04-29 (This Session - continued)
-- **Storage Mesh System (COMPLETE)**
-  - `POST /api/mesh/nodes` — register remote StreamHost nodes
-  - `GET /api/mesh/nodes` — list nodes with real-time storage stats
-  - `POST /api/mesh/nodes/{id}/ping` — refresh node status + storage stats  
-  - `DELETE /api/mesh/nodes/{id}` — remove node from pool
-  - `GET /api/mesh/status` — this server's own stats (for use as secondary node)
-  - Frontend: Storage Mesh dashboard with pool summary, node cards, add-node form
-- **PlayLab Integration (COMPLETE)**
-  - `GET /api/playlab/settings` — get/create API key
-  - `POST /api/playlab/regenerate-key` — rotate API key
-  - `PATCH /api/playlab/settings?enabled=` — enable/disable integration
-  - `GET /api/playlab/videos` — list all ready videos with HLS URLs (X-PlayLab-Key auth)
-  - `GET /api/playlab/video/{id}` — single video with all PlayLab DB-ready fields
-  - Frontend: PlayLab Integration page with API key, setup instructions, live API test
-  - Auth: `X-PlayLab-Key` header or `?api_key=` query param
-  - Test: 100% pass rate (23/23 backend + all frontend flows)
+### 2026-04-29 Session — All 6 Optional Features (DONE, fully tested)
+- **Analytics Dashboard** — view tracking (de-duped per visitor 30min) + admin dashboard with 6 stat cards, daily-views chart, top-videos table. Iteration 6: 18 backend + frontend tests green.
+- **Transcoding Presets** — 4 presets (source/1080p/720p/480p) selectable per-upload + global default. New `/api/settings/transcoding` and per-video `/reprocess`. Iteration 7: 13 tests green.
+- **Video Comments** — per-video threads with admin moderation. Both roles post; admins delete any, viewers delete own. Iteration 8: 16 tests green.
+- **Captions / Subtitles** — WebVTT upload + automatic SRT→VTT conversion. Public `/api/captions/{id}` for `<track>` element. Default-track flag is mutually exclusive. Iteration 9: 14 tests green.
+- **Video Sharing Links** — public tokenized URLs with optional password & expiration; standalone `/watch/:token` page (no auth). Iteration 10: 19 tests green.
+- **API Rate Limiting** — slowapi with XFF-aware key. Login 10/min, change-password 5/min, comments 30/min, share 120/min. Iteration 11: 8 tests green.
 
-### 2026-04-28 (Previous)
-- **True File Chunk Uploading (COMPLETE)**
-  - Backend: `POST /api/upload/init` + `POST /api/upload/chunk`
-  - 5MB chunks, sequential, MongoDB state tracking, auto-reassemble on final chunk
-  - Frontend: `UploadVideo.jsx` uses `File.slice()` for ALL file sizes
-  - Desktop App: `_upload_thread` uses chunked upload with determinate progress bar
-  - Test: 100% pass rate (10/10 backend + all frontend UI tests)
+### 2026-04-29 Earlier in session
+- Modular backend split, multi-user roles, player theme UI, embed-settings UI, PlayLab bulk import.
 
-### Previous Sessions
-- Fixed admin login persistence bug (self-healing `initialize_admin_user()`)
-- Rebranded from VidStream to StreamHost
-- Dark/Gray theme + colored buttons (Green/Red/Orange/Blue)
-- Footer: "Copyright 2026 StreamHost | StreamHost Ver: 2025.12.17"
-- Default credentials: StreamHost / password1234!@#
-- Python Tkinter desktop app with Windows .bat scripts
-- Docker Compose + Nginx + Ubuntu deployment scripts
-- Two WordPress plugins created (pending user testing)
+### Previous sessions
+- Storage Mesh, PlayLab base integration, webhook auto-sync, chunked upload + resume, video search/filter, Python desktop app.
 
 ---
 
 ## Prioritized Backlog
 
-### P0 (Done)
-- [x] True File Chunk Uploading
+### Done (this session)
+- [x] Analytics Dashboard
+- [x] Video Transcoding Presets
+- [x] Comments
+- [x] Captions / Subtitles
+- [x] Video Sharing Links
+- [x] API Rate Limiting
 
-### P1 (Done)
-- [x] Python Desktop App API wiring (login, video library, upload, folders all connected)
+### P2 / Future
+- [ ] Desktop App E2E verification (chunked upload + new endpoints)
+- [ ] Storage Mesh peer-to-peer file transfer (currently only stats pooling)
+- [ ] Redis-backed rate limiter for multi-pod deployments (currently in-memory)
+- [ ] Email notifications (e.g., new comment, share-link viewed)
+- [ ] Adaptive bitrate HLS (multiple ladder rungs in one playlist)
 
-### P2 — Upcoming
-- [ ] E2E Docker deployment test on live Ubuntu (pending user environment)
-- [ ] WordPress plugin testing (BLOCKED — user needs WP environment)
-
-### Future / Backlog
-- [ ] Player theme settings UI (global theme colors)
-- [ ] Embed settings per-video UI improvements
-- [ ] Upload resume on network failure (retry failed chunks)
-- [ ] Video search / filter in library
-- [ ] Multi-user support (currently single admin)
-
-
-## Updated Backlog (2026-04-29)
-
-### Done
-- [x] True File Chunk Uploading
-- [x] Storage Mesh System  
-- [x] PlayLab Integration
-- [x] Python Desktop App API wiring
-
-### Backlog
-- [ ] Split server.py into route modules (1041 lines — too large)
-- [ ] Upload resume on network failure
-- [ ] Video search / filter in library
-- [ ] Player theme settings UI
+### Removed by user
+- ~~Docker E2E deployment tests~~
+- ~~WordPress plugin testing~~
