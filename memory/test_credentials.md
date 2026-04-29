@@ -2,8 +2,15 @@
 
 ## Admin Account
 - **Username:** StreamHost
-- **Password:** TestPass123!@# (changed from default during testing)
-- **Note:** Default password is `password1234!@#` but was changed to `TestPass123!@#` during testing. The system requires a password change on first login (`must_change_password=true`). After change, `must_change_password=false`.
+- **Password:** TestPass123!@# (changed from default `password1234!@#` during testing in iteration_2)
+- **Role:** admin (full access)
 
-## To Reset to Default
-The admin user is self-healing — if deleted, the system recreates `StreamHost` / `password1234!@#` on next restart.
+## Viewer Account
+- **Username:** testviewer
+- **Password:** Viewer123!
+- **Role:** viewer (watch videos + get embed codes; no upload/delete/settings/users)
+
+## Notes
+- Default password on fresh install: `password1234!@#` (force-change on first login)
+- System self-heals the StreamHost admin on every startup
+- Roles: `admin` = full access | `viewer` = read-only library + embed codes

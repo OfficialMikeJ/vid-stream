@@ -49,6 +49,8 @@ async def initialize_admin_user():
             admin = User(
                 username="StreamHost",
                 password_hash=hash_password("password1234!@#"),
+                role="admin",
+                is_active=True,
                 must_change_password=True,
             )
             doc = admin.model_dump()
@@ -56,6 +58,15 @@ async def initialize_admin_user():
             await db.users.insert_one(doc)
             logger.info("Default admin user created: StreamHost")
         else:
+            # Backfill new fields for legacy documents that predate multi-user support
+            backfill = {}
+            if "role" not in existing:
+                backfill["role"] = "admin"
+            if "is_active" not in existing:
+                backfill["is_active"] = True
+            if backfill:
+                await db.users.update_one({"username": "StreamHost"}, {"$set": backfill})
+                logger.info(f"Backfilled admin user fields: {list(backfill.keys())}")
             logger.info(f"Admin user exists: {existing.get('id', 'unknown')}")
     except Exception as e:
         logger.error(f"Error during admin init: {e}")
@@ -63,6 +74,8 @@ async def initialize_admin_user():
             admin = User(
                 username="StreamHost",
                 password_hash=hash_password("password1234!@#"),
+                role="admin",
+                is_active=True,
                 must_change_password=True,
             )
             doc = admin.model_dump()

@@ -63,34 +63,18 @@ const EmbedSettingsDialog = ({ video, onClose }) => {
   const save = async () => {
     setSaving(true);
     try {
+      const params = new URLSearchParams();
+      settings.allowed_domains.forEach(d => params.append("allowed_domains", d));
+      params.append("player_color", settings.player_color);
+      params.append("show_controls", settings.show_controls);
+      params.append("autoplay", settings.autoplay);
+      params.append("loop", settings.loop);
+      if (settings.custom_css) params.append("custom_css", settings.custom_css);
+
       if (hasExisting) {
-        await axios.patch(
-          `${API}/embed-settings/${video.id}`,
-          null,
-          {
-            params: {
-              player_color: settings.player_color,
-              show_controls: settings.show_controls,
-              autoplay: settings.autoplay,
-              loop: settings.loop,
-              custom_css: settings.custom_css || null,
-            },
-          }
-        );
-        // Update allowed_domains separately (array param)
-        const params = new URLSearchParams();
-        settings.allowed_domains.forEach(d => params.append("allowed_domains", d));
-        params.append("player_color", settings.player_color);
-        params.append("show_controls", settings.show_controls);
-        params.append("autoplay", settings.autoplay);
-        params.append("loop", settings.loop);
-        if (settings.custom_css) params.append("custom_css", settings.custom_css);
         await axios.patch(`${API}/embed-settings/${video.id}?${params.toString()}`);
       } else {
-        await axios.post(`${API}/embed-settings`, {
-          video_id: video.id,
-          ...settings,
-        });
+        await axios.post(`${API}/embed-settings`, { video_id: video.id, ...settings });
         setHasExisting(true);
       }
       toast.success("Embed settings saved");
