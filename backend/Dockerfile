@@ -26,12 +26,14 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY server.py .
+COPY . .
 
 # Create video storage directory
 RUN mkdir -p /app/video_storage/originals \
     /app/video_storage/thumbnails \
-    /app/video_storage/hls
+    /app/video_storage/hls \
+    /app/video_storage/captions \
+    /app/video_storage/temp
 
 # Create non-root user for security
 RUN useradd -m -u 1000 streamhost \

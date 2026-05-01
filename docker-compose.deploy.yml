@@ -1,0 +1,82 @@
+# StreamHost Deployment Compose (uses pre-built images from GitHub Container Registry)
+#
+# USE THIS ONE when deploying to any server (aaPanel, plain Ubuntu, etc.)
+# where you DON'T have the source code — only this file and the .env file.
+#
+# The images are built and pushed by .github/workflows/build-images.yml on
+# every push to main and on every tag. Replace OWNER/REPO below with your
+# GitHub namespace, or set the env vars IMAGE_BACKEND and IMAGE_FRONTEND.
+#
+# Quick start (on the server):
+#   1. mkdir -p /opt/streamhost && cd /opt/streamhost
+#   2. Save this file as docker-compose.yml
+#   3. Create .env (see .env.example)
+#   4. docker compose pull && docker compose up -d
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: streamhost-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: streamhost_db
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - streamhost-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  backend:
+    image: ${IMAGE_BACKEND:-ghcr.io/OWNER/REPO-backend:latest}
+    container_name: streamhost-backend
+    restart: unless-stopped
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=streamhost_db
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required in .env}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:8001}
+    volumes:
+      - video_storage:/app/video_storage
+    ports:
+      - "${BACKEND_PORT:-8001}:8001"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - streamhost-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    image: ${IMAGE_FRONTEND:-ghcr.io/OWNER/REPO-frontend:latest}
+    container_name: streamhost-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    networks:
+      - streamhost-network
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  video_storage:
+    driver: local
+
+networks:
+  streamhost-network:
+    driver: bridge
