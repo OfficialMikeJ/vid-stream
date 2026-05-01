@@ -153,6 +153,117 @@ cd frontend
 yarn start
 ```
 
+## 🐳 Docker Deployment (recommended for production)
+
+The easiest way to deploy StreamHost to any server (aaPanel, plain Ubuntu, a VPS, etc.) is with pre-built Docker images from **GitHub Container Registry (GHCR)**. You only need **two files** on the server — no source code.
+
+### How it works
+
+```
+ ┌────────────────┐   push to main    ┌─────────────────────────────┐
+ │  Your GitHub   │ ───────────────▶  │  GitHub Actions builds and  │
+ │  repository    │                    │  pushes backend + frontend  │
+ └────────────────┘                    │  images to ghcr.io          │
+                                       └──────────────┬──────────────┘
+                                                      │ docker compose pull
+                                                      ▼
+                                       ┌─────────────────────────────┐
+                                       │  Your server (aaPanel/VPS)  │
+                                       │  runs docker-compose.yml +  │
+                                       │  .env — nothing else needed │
+                                       └─────────────────────────────┘
+```
+
+### ⚠️ Common error
+
+> `unable to prepare context: path ".../frontend" not found`
+
+This means you uploaded `docker-compose.yml` that uses `build: ./frontend` but didn't put the source on the server. **Use the pre-built image flow below instead.**
+
+### Step 1 — Publish images (one-time setup on GitHub)
+
+The repo ships with `.github/workflows/build-images.yml`. It builds and pushes both images to GHCR on every push to `main`/`master`, every tag, and every Release.
+
+1. Push the repo to GitHub (use **"Save to GitHub"** in chat, or plain `git push`).
+2. Go to **Actions** tab → **Build & Push Docker Images** → **Run workflow** (first run).
+3. Once finished, check your GitHub profile → **Packages** — you should see:
+   - `<repo>-backend`
+   - `<repo>-frontend`
+4. (Optional) Make packages public: profile → each package → Package settings → Change visibility → Public. If you keep them private, you'll need to `docker login ghcr.io` on the server.
+
+### Step 2 — Prepare the server
+
+On the server (aaPanel compose folder or `/opt/streamhost/`):
+
+1. Upload **only these two files** from the repo:
+   - `docker-compose.deploy.yml` → rename to `docker-compose.yml`
+   - `.env.example` → rename to `.env`
+2. Edit `.env` and fill in real values:
+   ```bash
+   # Replace with your GitHub namespace (lowercase!)
+   IMAGE_BACKEND=ghcr.io/yourname/streamhost-backend:latest
+   IMAGE_FRONTEND=ghcr.io/yourname/streamhost-frontend:latest
+
+   # Strong random string used to sign JWTs
+   JWT_SECRET=a-long-random-secret-string-change-this
+
+   # Public URL where the backend is reachable
+   BACKEND_URL=https://yourdomain.com
+
+   # CORS allow-list (use * only for testing)
+   CORS_ORIGINS=https://yourdomain.com
+
+   # Host ports (change if these are taken)
+   BACKEND_PORT=8001
+   FRONTEND_PORT=3000
+   ```
+
+### Step 3 — Private images (skip if you made them public)
+
+If the packages are private, log in on the server with a GitHub Personal Access Token that has `read:packages` scope:
+
+```bash
+echo "YOUR_PAT" | docker login ghcr.io -u your-github-username --password-stdin
+```
+
+### Step 4 — Run it
+
+```bash
+docker compose pull
+docker compose up -d
+docker compose ps
+docker compose logs -f backend   # optional — watch startup
+```
+
+Open `http://your-server:3000` and log in with the default credentials (you'll be forced to change the password on first login).
+
+### Updating to the latest version
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+### File reference
+
+| File | Purpose |
+|------|---------|
+| `docker-compose.yml` | Local-dev compose that **builds** images from source (needs repo cloned). |
+| `docker-compose.deploy.yml` | Production compose using **pre-built images** from GHCR. Ship this to the server. |
+| `.env.example` | Template for the env file that sits next to the deploy compose. |
+| `.github/workflows/build-images.yml` | Builds + pushes backend and frontend images to GHCR on push/tag/release. |
+| `.github/workflows/build-desktop.yml` | Builds the Windows `.exe` of the desktop app via PyInstaller on push/tag/release. |
+
+### Using a plain Linux box (no aaPanel)
+
+```bash
+mkdir -p /opt/streamhost && cd /opt/streamhost
+# Upload docker-compose.deploy.yml as docker-compose.yml and .env alongside it
+docker compose pull
+docker compose up -d
+```
+
+Put Nginx in front of `:3000` and `:8001` for HTTPS — see the Nginx example further down in this README.
+
 ## 🖥️ Desktop Application
 
 The StreamHost Desktop Application provides the same features as the web interface in a native desktop experience.
@@ -501,6 +612,13 @@ streamhost/
 │   ├── Install_Dependencies.bat
 │   └── README.md              # Desktop app documentation
 │
+├── .github/workflows/
+│   ├── build-images.yml       # Publishes backend+frontend images to GHCR
+│   └── build-desktop.yml      # Builds Windows .exe via PyInstaller
+│
+├── docker-compose.yml         # Local dev (builds from source)
+├── docker-compose.deploy.yml  # Production (uses pre-built GHCR images)
+├── .env.example               # Deployment env template
 ├── README.md                  # This file
 ├── PRODUCTION-GUIDE.md        # Production deployment guide
 └── LICENSE                    # License information
