@@ -1,0 +1,61 @@
+name: Build Desktop App
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'desktop-app/**'
+      - '.github/workflows/build-desktop.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'desktop-app/**'
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: desktop-app/requirements.txt
+
+      - name: Install dependencies
+        working-directory: desktop-app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller==6.11.1
+
+      - name: Build executable with PyInstaller
+        working-directory: desktop-app
+        run: |
+          pyinstaller --noconfirm --onefile --windowed `
+            --name "StreamHost" `
+            --hidden-import=ttkbootstrap `
+            --hidden-import=PIL._tkinter_finder `
+            streamhost_desktop.py
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreamHost-Windows
+          path: desktop-app/dist/StreamHost.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: desktop-app/dist/StreamHost.exe
